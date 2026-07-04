@@ -1,0 +1,11 @@
+backend/target/ 
+backend/.idea/ 
+backend/*.iml 
+mobile/node_modules/ 
+mobile/.expo/ 
+mobile/dist/ 
+mobile/web-build/ 
+mobile/.env 
+.DS_Store 
+Thumbs.db 
+*.log 
