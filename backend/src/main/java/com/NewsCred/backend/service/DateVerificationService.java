@@ -36,7 +36,12 @@ public class DateVerificationService {
         "yyyy.MM.dd",
         "dd.MM.yyyy",
         "MMM dd, yyyy",
-        "MMMM dd, yyyy"
+        "MMMM dd, yyyy",
+        "yyyy/MM/dd",
+        "dd-MM-yyyy",
+        "yyyy-MM-dd",
+        "MM.dd.yyyy",
+        "dd.MM.yyyy"
     );
 
     private static final List<String> DATE_REGEX_PATTERNS = Arrays.asList(
@@ -54,7 +59,10 @@ public class DateVerificationService {
         "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d{1,2},\\s+\\d{4}",
         "\\d{1,2}\\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d{4}",
         "Published:\\s*\\d{1,2}\\s+(January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{4}",
-        "Last updated:\\s*(January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2},\\s+\\d{4}"
+        "Last updated:\\s*(January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2},\\s+\\d{4}",
+        "\\d{1,2}-\\d{1,2}-\\d{4}",
+        "\\d{4}-\\d{1,2}-\\d{1,2}",
+        "\\d{2}\\.\\d{2}\\.\\d{4}"
     );
 
     private static final List<String> TIMELESS_KEYWORDS = Arrays.asList(
@@ -155,7 +163,6 @@ public class DateVerificationService {
     private LocalDate extractDateFromUrl(String url) {
         if (url == null || url.isEmpty()) return null;
         
-        // Check for /2024/01/01/ pattern
         Pattern pattern = Pattern.compile("/(\\d{4})/(\\d{2})/(\\d{2})/");
         Matcher matcher = pattern.matcher(url);
         if (matcher.find()) {
@@ -168,11 +175,9 @@ public class DateVerificationService {
                     return LocalDate.of(year, month, day);
                 }
             } catch (NumberFormatException e) {
-                // Continue to next pattern
             }
         }
         
-        // Check for /2024-01-01 pattern
         pattern = Pattern.compile("/(\\d{4})-(\\d{2})-(\\d{2})");
         matcher = pattern.matcher(url);
         if (matcher.find()) {
@@ -185,11 +190,9 @@ public class DateVerificationService {
                     return LocalDate.of(year, month, day);
                 }
             } catch (NumberFormatException e) {
-                // Continue
             }
         }
         
-        // Check for /2024/01/ pattern (year/month)
         pattern = Pattern.compile("/(\\d{4})/(\\d{2})/");
         matcher = pattern.matcher(url);
         if (matcher.find()) {
@@ -201,7 +204,6 @@ public class DateVerificationService {
                     return LocalDate.of(year, month, 1);
                 }
             } catch (NumberFormatException e) {
-                // Continue
             }
         }
         

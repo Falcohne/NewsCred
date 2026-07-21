@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,7 +28,17 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final PasswordValidator passwordValidator;
 
-    private final ConcurrentHashMap<String, Integer> loginAttempts = new ConcurrentHashMap<>();
+    private static class LockoutInfo {
+        int attempts;
+        LocalDateTime lockoutStart;
+        
+        LockoutInfo(int attempts, LocalDateTime lockoutStart) {
+            this.attempts = attempts;
+            this.lockoutStart = lockoutStart;
+        }
+    }
+
+    private final ConcurrentHashMap<String, LockoutInfo> loginAttempts = new ConcurrentHashMap<>();
     private static final int MAX_LOGIN_ATTEMPTS = 5;
     private static final long LOCKOUT_DURATION_MINUTES = 15;
 
@@ -76,55 +87,54 @@ public class AuthService {
         String token = jwtUtil.generateToken(user.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
-        AuthResponse response = new AuthResponse(
+        return new AuthResponse(
             token,
+            refreshToken,
             user.getId(),
             user.getEmail(),
             user.getFullName(),
             user.isPremium(),
             user.getAnalysisCount()
         );
-        // Remove this line if AuthResponse doesn't have setRefreshToken
-        // response.setRefreshToken(refreshToken);
-        
-        return response;
     }
 
     public AuthResponse login(LoginRequest request) {
-        String email = request.getEmail().toLowerCase();
+        String loginIdentifier = request.getUsernameOrEmail().toLowerCase();
         
-        if (isAccountLocked(email)) {
-            long remainingMinutes = getRemainingLockoutMinutes(email);
+        if (isAccountLocked(loginIdentifier)) {
+            long remainingMinutes = getRemainingLockoutMinutes(loginIdentifier);
             throw new RuntimeException("Account is temporarily locked. Please try again in " + 
                 remainingMinutes + " minutes.");
         }
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findByEmail(loginIdentifier)
+                .orElse(null);
+        
+        if (user == null) {
+            user = userRepository.findByUsername(loginIdentifier)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+        }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            recordFailedAttempt(email);
-            int remainingAttempts = MAX_LOGIN_ATTEMPTS - loginAttempts.getOrDefault(email, 0);
+            recordFailedAttempt(loginIdentifier);
+            int remainingAttempts = MAX_LOGIN_ATTEMPTS - getAttemptCount(loginIdentifier);
             throw new RuntimeException("Invalid password. " + remainingAttempts + " attempts remaining.");
         }
 
-        loginAttempts.remove(email);
+        loginAttempts.remove(loginIdentifier);
 
         String token = jwtUtil.generateToken(user.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
-        AuthResponse response = new AuthResponse(
+        return new AuthResponse(
             token,
+            refreshToken,
             user.getId(),
             user.getEmail(),
             user.getFullName(),
             user.isPremium(),
             user.getAnalysisCount()
         );
-        // Remove this line if AuthResponse doesn't have setRefreshToken
-        // response.setRefreshToken(refreshToken);
-        
-        return response;
     }
 
     public AuthResponse refreshToken(String refreshToken) {
@@ -143,18 +153,15 @@ public class AuthService {
         String newToken = jwtUtil.generateToken(user.getEmail());
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
-        AuthResponse response = new AuthResponse(
+        return new AuthResponse(
             newToken,
+            newRefreshToken,
             user.getId(),
             user.getEmail(),
             user.getFullName(),
             user.isPremium(),
             user.getAnalysisCount()
         );
-        // Remove this line if AuthResponse doesn't have setRefreshToken
-        // response.setRefreshToken(newRefreshToken);
-        
-        return response;
     }
 
     @Transactional
@@ -227,22 +234,42 @@ public class AuthService {
         userRepository.delete(user);
     }
 
-    private boolean isAccountLocked(String email) {
-        Integer attempts = loginAttempts.get(email);
-        if (attempts == null || attempts < MAX_LOGIN_ATTEMPTS) {
+    private boolean isAccountLocked(String identifier) {
+        LockoutInfo info = loginAttempts.get(identifier);
+        if (info == null || info.attempts < MAX_LOGIN_ATTEMPTS) {
             return false;
         }
-        return true;
+        
+        long minutesSinceLockout = Duration.between(info.lockoutStart, LocalDateTime.now()).toMinutes();
+        return minutesSinceLockout < LOCKOUT_DURATION_MINUTES;
     }
 
-    private long getRemainingLockoutMinutes(String email) {
-        return LOCKOUT_DURATION_MINUTES;
+    private long getRemainingLockoutMinutes(String identifier) {
+        LockoutInfo info = loginAttempts.get(identifier);
+        if (info == null) {
+            return 0;
+        }
+        
+        long minutesSinceLockout = Duration.between(info.lockoutStart, LocalDateTime.now()).toMinutes();
+        long remaining = LOCKOUT_DURATION_MINUTES - minutesSinceLockout;
+        return Math.max(0, remaining);
     }
 
-    private void recordFailedAttempt(String email) {
-        loginAttempts.compute(email, (key, value) -> {
-            if (value == null) return 1;
-            return Math.min(value + 1, MAX_LOGIN_ATTEMPTS + 1);
+    private int getAttemptCount(String identifier) {
+        LockoutInfo info = loginAttempts.get(identifier);
+        if (info == null) {
+            return 0;
+        }
+        return info.attempts;
+    }
+
+    private void recordFailedAttempt(String identifier) {
+        loginAttempts.compute(identifier, (key, value) -> {
+            if (value == null) {
+                return new LockoutInfo(1, LocalDateTime.now());
+            }
+            int newAttempts = Math.min(value.attempts + 1, MAX_LOGIN_ATTEMPTS + 1);
+            return new LockoutInfo(newAttempts, LocalDateTime.now());
         });
     }
 }

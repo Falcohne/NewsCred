@@ -57,7 +57,7 @@ public class Article {
     private String analysisSummary;
 
     @Column(name = "content_summary", columnDefinition = "TEXT")
-    private String summary;
+    private String contentSummary;
 
     @Column(name = "user_id")
     private String userId;
@@ -101,7 +101,6 @@ public class Article {
     @Column(name = "image_message", columnDefinition = "TEXT")
     private String imageMessage;
 
-    // 🟢 NEW: Image URLs list
     @ElementCollection
     @CollectionTable(name = "article_images", joinColumns = @JoinColumn(name = "article_id"))
     @Column(name = "image_url", columnDefinition = "TEXT")
@@ -123,8 +122,6 @@ public class Article {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
-    // ─── GETTERS AND SETTERS ────────────────────────────────────────────────
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -171,13 +168,12 @@ public class Article {
     public String getAnalysisSummary() { return analysisSummary; }
     public void setAnalysisSummary(String analysisSummary) { this.analysisSummary = analysisSummary; }
 
-    public String getSummary() { return summary; }
-    public void setSummary(String summary) { this.summary = summary; }
+    public String getContentSummary() { return contentSummary; }
+    public void setContentSummary(String contentSummary) { this.contentSummary = contentSummary; }
 
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
 
-    // Date Verification Getters and Setters
     public LocalDate getPublishDate() { return publishDate; }
     public void setPublishDate(LocalDate publishDate) { this.publishDate = publishDate; }
 
@@ -190,7 +186,6 @@ public class Article {
     public String getDateMessage() { return dateMessage; }
     public void setDateMessage(String dateMessage) { this.dateMessage = dateMessage; }
 
-    // Author Credibility Getters and Setters
     public String getAuthorName() { return authorName; }
     public void setAuthorName(String authorName) { this.authorName = authorName; }
 
@@ -203,7 +198,6 @@ public class Article {
     public String getAuthorMessage() { return authorMessage; }
     public void setAuthorMessage(String authorMessage) { this.authorMessage = authorMessage; }
 
-    // Image Verification Getters and Setters
     public Integer getImageCount() { return imageCount; }
     public void setImageCount(Integer imageCount) { this.imageCount = imageCount; }
 
@@ -216,7 +210,6 @@ public class Article {
     public String getImageMessage() { return imageMessage; }
     public void setImageMessage(String imageMessage) { this.imageMessage = imageMessage; }
 
-    // 🟢 NEW: Image URLs Getters and Setters
     public List<String> getImageUrls() { return imageUrls; }
     public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
 

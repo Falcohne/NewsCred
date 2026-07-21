@@ -20,6 +20,17 @@ public class AuthResponse {
         this.emailSent = false;
     }
 
+    public AuthResponse(String token, String refreshToken, String userId, String email, String fullName, boolean premium, int analysisCount) {
+        this.token = token;
+        this.refreshToken = refreshToken;
+        this.userId = userId;
+        this.email = email;
+        this.fullName = fullName;
+        this.premium = premium;
+        this.analysisCount = analysisCount;
+        this.emailSent = false;
+    }
+
     public String getToken() { return token; }
     public void setToken(String token) { this.token = token; }
 

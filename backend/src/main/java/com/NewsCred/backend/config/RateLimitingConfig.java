@@ -27,15 +27,15 @@ public class RateLimitingConfig {
     private final Map<String, RateLimitInfo> requestCounts = new ConcurrentHashMap<>();
     private final ScheduledExecutorService cleanupExecutor = Executors.newSingleThreadScheduledExecutor();
 
-    private static final long CLEANUP_INTERVAL_MINUTES = 5;
+    private static final long CLEANUP_INTERVAL_SECONDS = 60;
 
     @PostConstruct
     public void init() {
         cleanupExecutor.scheduleAtFixedRate(
             this::cleanupExpiredEntries,
-            CLEANUP_INTERVAL_MINUTES,
-            CLEANUP_INTERVAL_MINUTES,
-            TimeUnit.MINUTES
+            CLEANUP_INTERVAL_SECONDS,
+            CLEANUP_INTERVAL_SECONDS,
+            TimeUnit.SECONDS
         );
     }
 

@@ -34,9 +34,8 @@ public class User implements UserDetails {
 
     private int analysisCount = 0;
 
-    // ✅ We'll keep this field but set it to true by default
     @Column(name = "email_verified")
-    private boolean emailVerified = true;  // ✅ CHANGED: Default to true
+    private boolean emailVerified = false;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -55,7 +54,6 @@ public class User implements UserDetails {
         updatedAt = LocalDateTime.now();
     }
 
-    // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -86,7 +84,6 @@ public class User implements UserDetails {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
-    // Spring Security methods
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of();
@@ -109,6 +106,6 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;  // ✅ Always enabled - no email verification
+        return true;
     }
 }

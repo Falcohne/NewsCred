@@ -44,7 +44,9 @@ public class ContentExtractorService {
             "article", ".article-body", ".story-body", ".post-content", 
             ".entry-content", ".content", ".article-content", ".story-content",
             ".post-body", ".body-text", ".article-text", "main p", ".content p",
-            "div[itemprop='articleBody']", ".article__body", ".post__body"
+            "div[itemprop='articleBody']", ".article__body", ".post__body",
+            ".main-content", ".post-content", ".entry-content", ".node-content",
+            ".article__content", ".story__content", ".content__body"
         };
         
         for (String selector : selectors) {
@@ -53,7 +55,7 @@ public class ContentExtractorService {
                 if (!elements.isEmpty()) {
                     String text = elements.text();
                     if (text.length() > 200) {
-                        return text.replaceAll("\\s+", " ").trim();
+                        return cleanContent(text);
                     }
                 }
             } catch (Exception e) {
@@ -61,7 +63,17 @@ public class ContentExtractorService {
             }
         }
         
-        return doc.select("p").text().replaceAll("\\s+", " ").trim();
+        String fallback = doc.select("p").text();
+        if (fallback.length() > 200) {
+            return cleanContent(fallback);
+        }
+        
+        return cleanContent(doc.body().text());
+    }
+
+    private String cleanContent(String content) {
+        if (content == null) return "";
+        return content.replaceAll("\\s+", " ").trim();
     }
 
     private String extractTitle(Document doc) {

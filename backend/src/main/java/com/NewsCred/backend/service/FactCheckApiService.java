@@ -1,13 +1,11 @@
 package com.NewsCred.backend.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 @Service
 public class FactCheckApiService {
@@ -15,7 +13,6 @@ public class FactCheckApiService {
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
 
-    // List of trusted fact-checking organizations
     private static final List<String> FACT_CHECK_ORGANIZATIONS = List.of(
         "Snopes", "FactCheck.org", "PolitiFact", "Reuters Fact Check",
         "AP Fact Check", "BBC Reality Check", "Full Fact", "AFP Fact Check",
@@ -29,16 +26,12 @@ public class FactCheckApiService {
         this.objectMapper = new ObjectMapper();
     }
 
-    /**
-     * Extract claims from article content
-     */
     public List<String> extractClaims(String content) {
         List<String> claims = new ArrayList<>();
         if (content == null) return claims;
 
         String lowerContent = content.toLowerCase();
         
-        // Look for claim indicators
         String[] claimPatterns = {
             "according to", "source says", "reports suggest", "research shows",
             "study found", "evidence indicates", "claimed that", "stated that",
@@ -46,7 +39,6 @@ public class FactCheckApiService {
             "scientists say", "experts warn", "officials confirm"
         };
 
-        // Extract sentences containing claims
         String[] sentences = content.split("[.!?]");
         for (String sentence : sentences) {
             String trimmed = sentence.trim();
@@ -63,66 +55,10 @@ public class FactCheckApiService {
         return claims;
     }
 
-    /**
-     * Simulate fact-checking a claim against known facts
-     * In production, this would call real APIs
-     */
-    public FactCheckResult checkClaim(String claim) {
-        FactCheckResult result = new FactCheckResult();
-        
-        // Check for known trustworthy patterns
-        String lowerClaim = claim.toLowerCase();
-        
-        // Look for scientific language
-        if (lowerClaim.contains("study") || lowerClaim.contains("research") ||
-            lowerClaim.contains("scientists") || lowerClaim.contains("experts")) {
-            result.setTrustScore(0.8);
-            result.setSource("Scientific consensus");
-            result.setStatus("LIKELY_TRUE");
-        }
-        // Look for official sources
-        else if (lowerClaim.contains("government") || lowerClaim.contains("official") ||
-                 lowerClaim.contains("authority") || lowerClaim.contains("department")) {
-            result.setTrustScore(0.7);
-            result.setSource("Official source");
-            result.setStatus("LIKELY_TRUE");
-        }
-        // Look for unsubstantiated claims
-        else if (lowerClaim.contains("alleged") || lowerClaim.contains("rumor") ||
-                 lowerClaim.contains("speculated") || lowerClaim.contains("unnamed")) {
-            result.setTrustScore(0.3);
-            result.setSource("Unconfirmed source");
-            result.setStatus("UNVERIFIED");
-        }
-        // Default
-        else {
-            result.setTrustScore(0.5);
-            result.setSource("Unknown source");
-            result.setStatus("NEEDS_VERIFICATION");
-        }
-
-        // Check if any fact-checking organization has verified this
-        for (String org : FACT_CHECK_ORGANIZATIONS) {
-            if (lowerClaim.contains(org.toLowerCase()) || 
-                lowerClaim.contains(org.replace(" ", "").toLowerCase())) {
-                result.setTrustScore(0.9);
-                result.setSource("Verified by " + org);
-                result.setStatus("VERIFIED_TRUE");
-                break;
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * Simulate cross-referencing with trusted sources
-     */
     public CrossReferenceResult crossReference(String content) {
         CrossReferenceResult result = new CrossReferenceResult();
         String lowerContent = content.toLowerCase();
         
-        // Check for mentions of trusted sources
         List<String> foundSources = new ArrayList<>();
         for (String source : FACT_CHECK_ORGANIZATIONS) {
             if (lowerContent.contains(source.toLowerCase())) {
@@ -138,31 +74,6 @@ public class FactCheckApiService {
             "This article does not reference any fact-checking sources. Consider verifying with Snopes or FactCheck.org.");
 
         return result;
-    }
-
-    // ─── Inner Classes ────────────────────────────────────────────────────────
-
-    public static class FactCheckResult {
-        private double trustScore;
-        private String source;
-        private String status;
-
-        public double getTrustScore() { return trustScore; }
-        public void setTrustScore(double trustScore) { this.trustScore = trustScore; }
-        public String getSource() { return source; }
-        public void setSource(String source) { this.source = source; }
-        public String getStatus() { return status; }
-        public void setStatus(String status) { this.status = status; }
-
-        public String getStatusLabel() {
-            switch (status) {
-                case "VERIFIED_TRUE": return "✅ Verified True";
-                case "LIKELY_TRUE": return "🟢 Likely True";
-                case "NEEDS_VERIFICATION": return "🟡 Needs Verification";
-                case "UNVERIFIED": return "🔴 Unverified";
-                default: return "⚪ Unknown";
-            }
-        }
     }
 
     public static class CrossReferenceResult {

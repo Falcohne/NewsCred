@@ -9,3 +9,7 @@ mobile/.env
 .DS_Store 
 Thumbs.db 
 *.log 
+".vscode/" 
+"mobile/" 
+"backend/src/main/resources/application-template.properties" 
+"backend/src/main/resources/application.properties" 

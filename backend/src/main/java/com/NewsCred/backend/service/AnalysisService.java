@@ -40,7 +40,7 @@ public class AnalysisService {
     @Transactional
     public Article analyzeArticle(Article article) {
         String contentSummary = summarizationService.summarize(article.getContent());
-        article.setSummary(contentSummary);
+        article.setContentSummary(contentSummary);
 
         DateVerificationResult dateResult = dateVerificationService.verifyDate(
             article.getContent(), 
@@ -124,7 +124,6 @@ public class AnalysisService {
                               (authorScore * AUTHOR_WEIGHT) +
                               (imageScore * IMAGE_WEIGHT);
         
-        // Ensure score is between 0 and 100
         overallScore = Math.min(Math.max(overallScore, 0), 100);
         article.setOverallScore(overallScore);
 
@@ -214,10 +213,6 @@ public class AnalysisService {
         return "HIGH";
     }
 
-    /**
-     * Calculate the original score based on 6 credibility indicators
-     * Returns a value between 0 and 100
-     */
     private double calculateOriginalScore(String source, String content, String evidence,
                                           String tone, String facts, String headline) {
         double sourceScore = scoreValue(source);
@@ -227,18 +222,13 @@ public class AnalysisService {
         double factsScore = scoreValue(facts);
         double headlineScore = scoreValue(headline);
         
-        // Each score is between 0 and 1, multiply by 100 to get percentage
         double rawScore = (sourceScore * 0.20 + contentScore * 0.15 + 
                           evidenceScore * 0.20 + toneScore * 0.15 + 
                           factsScore * 0.15 + headlineScore * 0.15) * 100;
         
-        // Ensure the score is between 0 and 100
         return Math.min(Math.max(rawScore, 0), 100);
     }
 
-    /**
-     * Convert string value to numeric score between 0 and 1
-     */
     private double scoreValue(String value) {
         if (value == null) return 0.5;
         switch (value.toUpperCase()) {

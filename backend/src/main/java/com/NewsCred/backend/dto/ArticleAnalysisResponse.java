@@ -1,6 +1,7 @@
 package com.NewsCred.backend.dto;
 
 import com.NewsCred.backend.entity.Article;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -13,7 +14,7 @@ public class ArticleAnalysisResponse {
     private String confidenceLevel;
     private String credibilityVerdict;
     private String analysisSummary;
-    private String summary;
+    private String contentSummary;
     private String sourceReliability;
     private String contentQuality;
     private String evidenceQuality;
@@ -26,6 +27,15 @@ public class ArticleAnalysisResponse {
     private boolean success;
     private String message;
 
+    private LocalDate publishDate;
+    private String dateStatus;
+    private Double dateScore;
+    private String dateMessage;
+    private String authorName;
+    private Double authorCredibilityScore;
+    private String authorStatus;
+    private String authorMessage;
+
     public static ArticleAnalysisResponse fromArticle(Article article) {
         ArticleAnalysisResponse response = new ArticleAnalysisResponse();
         response.setArticleId(article.getId());
@@ -36,7 +46,7 @@ public class ArticleAnalysisResponse {
         response.setConfidenceLevel(article.getConfidenceLevel());
         response.setCredibilityVerdict(article.getCredibilityVerdict());
         response.setAnalysisSummary(article.getAnalysisSummary());
-        response.setSummary(article.getSummary());
+        response.setContentSummary(article.getSummary());
         response.setSourceReliability(article.getSourceReliability());
         response.setContentQuality(article.getContentQuality());
         response.setEvidenceQuality(article.getEvidenceQuality());
@@ -47,6 +57,16 @@ public class ArticleAnalysisResponse {
         response.setImageUrls(article.getImageUrls());
         response.setCreatedAt(article.getCreatedAt());
         response.setSuccess(true);
+
+        response.setPublishDate(article.getPublishDate());
+        response.setDateStatus(article.getDateStatus());
+        response.setDateScore(article.getDateScore());
+        response.setDateMessage(article.getDateMessage());
+        response.setAuthorName(article.getAuthorName());
+        response.setAuthorCredibilityScore(article.getAuthorCredibilityScore());
+        response.setAuthorStatus(article.getAuthorStatus());
+        response.setAuthorMessage(article.getAuthorMessage());
+
         return response;
     }
 
@@ -66,8 +86,8 @@ public class ArticleAnalysisResponse {
     public void setCredibilityVerdict(String credibilityVerdict) { this.credibilityVerdict = credibilityVerdict; }
     public String getAnalysisSummary() { return analysisSummary; }
     public void setAnalysisSummary(String analysisSummary) { this.analysisSummary = analysisSummary; }
-    public String getSummary() { return summary; }
-    public void setSummary(String summary) { this.summary = summary; }
+    public String getContentSummary() { return contentSummary; }
+    public void setContentSummary(String contentSummary) { this.contentSummary = contentSummary; }
     public String getSourceReliability() { return sourceReliability; }
     public void setSourceReliability(String sourceReliability) { this.sourceReliability = sourceReliability; }
     public String getContentQuality() { return contentQuality; }
@@ -90,4 +110,21 @@ public class ArticleAnalysisResponse {
     public void setSuccess(boolean success) { this.success = success; }
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
+
+    public LocalDate getPublishDate() { return publishDate; }
+    public void setPublishDate(LocalDate publishDate) { this.publishDate = publishDate; }
+    public String getDateStatus() { return dateStatus; }
+    public void setDateStatus(String dateStatus) { this.dateStatus = dateStatus; }
+    public Double getDateScore() { return dateScore; }
+    public void setDateScore(Double dateScore) { this.dateScore = dateScore; }
+    public String getDateMessage() { return dateMessage; }
+    public void setDateMessage(String dateMessage) { this.dateMessage = dateMessage; }
+    public String getAuthorName() { return authorName; }
+    public void setAuthorName(String authorName) { this.authorName = authorName; }
+    public Double getAuthorCredibilityScore() { return authorCredibilityScore; }
+    public void setAuthorCredibilityScore(Double authorCredibilityScore) { this.authorCredibilityScore = authorCredibilityScore; }
+    public String getAuthorStatus() { return authorStatus; }
+    public void setAuthorStatus(String authorStatus) { this.authorStatus = authorStatus; }
+    public String getAuthorMessage() { return authorMessage; }
+    public void setAuthorMessage(String authorMessage) { this.authorMessage = authorMessage; }
 }

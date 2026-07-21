@@ -2,6 +2,8 @@ package com.NewsCred.backend.service;
 
 import org.springframework.stereotype.Service;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -49,6 +51,7 @@ public class ImageVerificationService {
         int stockPhotoCount = 0;
         int aiIndicatorCount = 0;
         int manipulationCount = 0;
+        int reachableCount = 0;
         
         for (String url : processedUrls) {
             if (isStockPhoto(url)) {
@@ -60,6 +63,9 @@ public class ImageVerificationService {
             if (hasManipulationInUrl(url)) {
                 manipulationCount++;
             }
+            if (isImageReachable(url)) {
+                reachableCount++;
+            }
         }
         
         result.setStockPhotoCount(stockPhotoCount);
@@ -67,6 +73,7 @@ public class ImageVerificationService {
         result.setHasManipulationSigns(manipulationCount > 0);
         result.setAIIndicatorCount(aiIndicatorCount);
         result.setManipulationCount(manipulationCount);
+        result.setReachableCount(reachableCount);
         
         double score = calculateImageScore(result);
         result.setScore(score);
@@ -119,7 +126,6 @@ public class ImageVerificationService {
             }
         }
         
-        // Remove duplicates while preserving order
         Set<String> uniqueUrls = new LinkedHashSet<>(urls);
         return new ArrayList<>(uniqueUrls);
     }
@@ -171,6 +177,21 @@ public class ImageVerificationService {
         return false;
     }
 
+    private boolean isImageReachable(String urlString) {
+        try {
+            URL url = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("HEAD");
+            connection.setConnectTimeout(3000);
+            connection.setReadTimeout(3000);
+            int responseCode = connection.getResponseCode();
+            connection.disconnect();
+            return responseCode >= 200 && responseCode < 400;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private double calculateImageScore(ImageVerificationResult result) {
         double score = 0.5;
         
@@ -180,6 +201,11 @@ public class ImageVerificationService {
         }
         if (imageCount >= 3) {
             score += 0.05;
+        }
+        
+        if (result.getReachableCount() > 0) {
+            double reachableRatio = (double) result.getReachableCount() / imageCount;
+            score += reachableRatio * 0.1;
         }
         
         if (result.getStockPhotoCount() > 0) {
@@ -234,6 +260,11 @@ public class ImageVerificationService {
         StringBuilder message = new StringBuilder();
         message.append("Found ").append(result.getImageCount()).append(" image(s). ");
         
+        if (result.getReachableCount() < result.getImageCount()) {
+            int unreachable = result.getImageCount() - result.getReachableCount();
+            message.append(unreachable).append(" image(s) could not be loaded. ");
+        }
+        
         if (result.isHasManipulationSigns()) {
             message.append("Signs of image manipulation detected. ");
         }
@@ -278,6 +309,7 @@ public class ImageVerificationService {
         private boolean hasManipulationSigns;
         private int aiIndicatorCount;
         private int manipulationCount;
+        private int reachableCount;
         private double score;
         private String status;
         private String message;
@@ -295,6 +327,8 @@ public class ImageVerificationService {
         public void setAIIndicatorCount(int aiIndicatorCount) { this.aiIndicatorCount = aiIndicatorCount; }
         public int getManipulationCount() { return manipulationCount; }
         public void setManipulationCount(int manipulationCount) { this.manipulationCount = manipulationCount; }
+        public int getReachableCount() { return reachableCount; }
+        public void setReachableCount(int reachableCount) { this.reachableCount = reachableCount; }
         public double getScore() { return score; }
         public void setScore(double score) { this.score = score; }
         public String getStatus() { return status; }
