@@ -11,16 +11,15 @@ const getApiBaseUrl = (): string => {
     return 'https://api.newscred.com/api';
   }
 
-  // Development environment - configure based on platform
-  // Use the IP from ipconfig: 10.243.127.154 (Wi-Fi) or 10.69.87.182 (Ethernet)
-  const localIp = '10.243.127.154'; // Wi-Fi IP
+  // Use the IP from ipconfig command output
+  const localIp = '10.243.127.154';
 
   if (Platform.OS === 'web') {
     return 'http://localhost:8080/api';
   }
 
   if (Platform.OS === 'android') {
-    return `http://10.243.127.154:8080/api`;
+    return `http://10.151.67.154:8080/api`;
   }
 
   if (Platform.OS === 'ios') {
@@ -44,7 +43,8 @@ const api = axios.create({
 });
 
 /**
- * Request interceptor - attaches authentication token and user headers
+ * Request interceptor that attaches the authentication token and user headers
+ * to every outgoing request if they exist in storage.
  */
 api.interceptors.request.use(
   async (config) => {
@@ -77,7 +77,9 @@ api.interceptors.request.use(
 );
 
 /**
- * Response interceptor - handles token expiration and errors
+ * Response interceptor that handles token expiration and other errors.
+ * When a 401 Unauthorized response is received, it clears the session
+ * and prompts the user to log in again.
  */
 api.interceptors.response.use(
   (response) => {
@@ -86,12 +88,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Handle 401 Unauthorized - token expired
+    // Handle 401 Unauthorized - token expired or invalid
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        // Clear all authentication data
+        // Clear all authentication data from storage
         await AsyncStorage.multiRemove([
           'token',
           'refreshToken',
@@ -110,7 +112,7 @@ api.interceptors.response.use(
       }
     }
 
-    // Log errors for debugging
+    // Log errors for debugging purposes
     if (error.response) {
       console.error(`API Error ${error.response.status}:`, error.response.data);
     } else if (error.request) {
@@ -126,6 +128,9 @@ api.interceptors.response.use(
 export default api;
 
 export const apiHelpers = {
+  /**
+   * Checks if the API server is reachable
+   */
   async checkHealth(): Promise<boolean> {
     try {
       const response = await api.get('/test');
@@ -135,6 +140,9 @@ export const apiHelpers = {
     }
   },
 
+  /**
+   * Checks if the user has a valid token stored
+   */
   async getTokenStatus(): Promise<{ hasToken: boolean; isValid?: boolean }> {
     const token = await AsyncStorage.getItem('token');
     if (!token) {
@@ -143,6 +151,9 @@ export const apiHelpers = {
     return { hasToken: true };
   },
 
+  /**
+   * Clears all authentication data from storage
+   */
   async clearAuth(): Promise<void> {
     await AsyncStorage.multiRemove([
       'token',
@@ -155,6 +166,9 @@ export const apiHelpers = {
     ]);
   },
 
+  /**
+   * Stores authentication data in storage
+   */
   async setAuthData(data: {
     token: string;
     userId: string;
