@@ -8,12 +8,13 @@ import {
   Alert,
   TouchableOpacity,
   Image,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import {
   Card,
   Title,
-  Paragraph,
   List,
   Switch,
   Button,
@@ -34,7 +35,7 @@ import CustomAlert from '../components/CustomAlert';
 import api from '../services/api';
 
 const SettingsScreen = ({ navigation }: any) => {
-  const { darkMode, toggleDarkMode, colors } = useTheme();
+  const { darkMode, toggleDarkMode } = useTheme();
   
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -61,7 +62,6 @@ const SettingsScreen = ({ navigation }: any) => {
   const [alertMessage, setAlertMessage] = useState('');
   const [alertButtons, setAlertButtons] = useState<any[]>([]);
 
-  // Ref for processing alert timeout
   const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const showSnackbar = (message: string, isError: boolean = false) => {
@@ -71,7 +71,6 @@ const SettingsScreen = ({ navigation }: any) => {
   };
 
   const showAlert = (title: string, message: string, buttons?: any[]) => {
-    // Clear any existing processing alert first
     if (title !== 'Processing' && title !== 'Processing Payment') {
       setAlertVisible(false);
     }
@@ -296,65 +295,21 @@ const SettingsScreen = ({ navigation }: any) => {
     if (isPremium) {
       showAlert(
         'Manage Subscription',
-        'You are currently on the Premium plan.\n\nMonthly: $4.99\nNext billing date: Coming soon\n\nWould you like to cancel your subscription?',
+        'You are currently on the Premium plan.\n\nMonthly: GH₵ 60.00\n\nWould you like to cancel your subscription?',
         [
           { text: 'Cancel', style: 'cancel' },
           { 
             text: 'Cancel Subscription',
-            style: 'cancel',
-            onPress: () => {
-              showAlert(
-                'Cancel Subscription',
-                'Are you sure you want to cancel your premium subscription? You will lose access to premium features.',
-                [
-                  { text: 'Keep Premium', style: 'cancel' },
-                  { 
-                    text: 'Cancel Anyway',
-                    onPress: async () => {
-                      await AsyncStorage.setItem('isPremium', 'false');
-                      setIsPremium(false);
-                      showSnackbar('Your premium subscription has been cancelled.');
-                    }
-                  }
-                ]
-              );
+            onPress: async () => {
+              await AsyncStorage.setItem('isPremium', 'false');
+              setIsPremium(false);
+              showSnackbar('Your premium subscription has been cancelled.');
             }
           }
         ]
       );
     } else {
-      showAlert(
-        'Upgrade to Premium',
-        'Get unlimited analyses, detailed reports and advanced features.\n\nUnlimited article analyses\nDetailed credibility reports\nAdvanced source verification\nPriority support\n\nOnly $4.99/month',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Upgrade Now ($4.99)',
-            onPress: () => {
-              // Show processing alert
-              showAlert(
-                'Processing',
-                'Please wait while we process your payment...',
-                []
-              );
-              
-              // Auto-dismiss processing alert after 2 seconds
-              processingTimeoutRef.current = setTimeout(async () => {
-                // Close the processing alert
-                setAlertVisible(false);
-                
-                // Complete the upgrade
-                await AsyncStorage.setItem('isPremium', 'true');
-                setIsPremium(true);
-                showSnackbar('You are now a Premium member.');
-                
-                // Clear the timeout reference
-                processingTimeoutRef.current = null;
-              }, 2000);
-            }
-          }
-        ]
-      );
+      navigation.navigate('Payment');
     }
   };
 
@@ -502,7 +457,7 @@ const SettingsScreen = ({ navigation }: any) => {
   const renderProfileSection = () => (
     <Card style={[styles.card, darkMode && styles.cardDark]} mode="elevated">
       <Card.Content>
-        <Title style={[styles.sectionTitle, darkMode && styles.textDark]}>Profile</Title>
+        <Text style={[styles.sectionTitle, darkMode && styles.textDark]}>Profile</Text>
         
         <View style={styles.profileRow}>
           <TouchableOpacity onPress={showImagePickerOptions} activeOpacity={0.8}>
@@ -594,7 +549,7 @@ const SettingsScreen = ({ navigation }: any) => {
   const renderPreferencesSection = () => (
     <Card style={[styles.card, darkMode && styles.cardDark]} mode="elevated">
       <Card.Content>
-        <Title style={[styles.sectionTitle, darkMode && styles.textDark]}>Preferences</Title>
+        <Text style={[styles.sectionTitle, darkMode && styles.textDark]}>Preferences</Text>
         
         <List.Item
           title="Dark Mode"
@@ -647,7 +602,7 @@ const SettingsScreen = ({ navigation }: any) => {
   const renderAccountSection = () => (
     <Card style={[styles.card, darkMode && styles.cardDark]} mode="elevated">
       <Card.Content>
-        <Title style={[styles.sectionTitle, darkMode && styles.textDark]}>Account</Title>
+        <Text style={[styles.sectionTitle, darkMode && styles.textDark]}>Account</Text>
         
         <List.Item
           title="Change Password"
@@ -698,7 +653,7 @@ const SettingsScreen = ({ navigation }: any) => {
   const renderAboutSection = () => (
     <Card style={[styles.card, darkMode && styles.cardDark]} mode="elevated">
       <Card.Content>
-        <Title style={[styles.sectionTitle, darkMode && styles.textDark]}>About</Title>
+        <Text style={[styles.sectionTitle, darkMode && styles.textDark]}>About</Text>
         
         <List.Item
           title="Version 1.0.0"
@@ -739,6 +694,7 @@ const SettingsScreen = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.containerDark]}>
+      <View style={styles.statusBarSpacer} />
       <Surface style={[styles.header, darkMode && styles.headerDark]} elevation={2}>
         <View style={styles.headerContent}>
           <IconButton
@@ -867,6 +823,10 @@ const styles = StyleSheet.create({
   },
   containerDark: {
     backgroundColor: '#0A0A1A',
+  },
+  statusBarSpacer: {
+    height: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: 'transparent',
   },
   header: {
     backgroundColor: '#FFFFFF',

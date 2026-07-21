@@ -5,7 +5,8 @@ import {
   StyleSheet,
   SafeAreaView,
   Linking,
-  useColorScheme,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useTheme } from '../context/ThemeContext';
@@ -28,7 +29,6 @@ interface ArticleWebViewScreenProps {
  */
 const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) => {
   const { darkMode } = useTheme();
-  const systemColorScheme = useColorScheme();
   const { url, title } = route.params || {};
   const webViewRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(true);
@@ -115,7 +115,6 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
       showsHorizontalScrollIndicator={false}
       showsVerticalScrollIndicator={true}
       injectedJavaScript={`
-        // Add dark mode support for web content
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
           document.body.style.backgroundColor = '#0A0A1A';
           document.body.style.color = '#FFFFFF';
@@ -162,6 +161,7 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
 
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.containerDark]}>
+      <View style={styles.statusBarSpacer} />
       <Surface style={[styles.header, darkMode && styles.headerDark]} elevation={2}>
         <View style={styles.headerContent}>
           <IconButton
@@ -221,6 +221,10 @@ const styles = StyleSheet.create({
   },
   containerDark: {
     backgroundColor: '#0A0A1A',
+  },
+  statusBarSpacer: {
+    height: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: 'transparent',
   },
   header: {
     backgroundColor: '#FFFFFF',
