@@ -6,6 +6,8 @@ import {
   ScrollView,
   SafeAreaView,
   RefreshControl,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -42,10 +44,6 @@ interface StatisticsData {
   }>;
 }
 
-/**
- * Statistics screen showing analytics about analyzed articles
- * Includes score distribution, top sources, and recent activity
- */
 const StatisticsScreen = ({ navigation }: any) => {
   const { darkMode } = useTheme();
 
@@ -83,10 +81,6 @@ const StatisticsScreen = ({ navigation }: any) => {
     loadStatistics();
   }, []);
 
-  /**
-   * Loads all user articles and calculates statistics
-   * Aggregates data for score distribution, top sources, and recent activity
-   */
   const loadStatistics = async () => {
     setLoading(true);
     try {
@@ -245,6 +239,7 @@ const StatisticsScreen = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.containerDark]}>
+      <View style={styles.statusBarSpacer} />
       <Surface style={[styles.header, darkMode && styles.headerDark]} elevation={2}>
         <View style={styles.headerContent}>
           <IconButton
@@ -303,7 +298,6 @@ const StatisticsScreen = ({ navigation }: any) => {
           </Card>
         ) : (
           <>
-            {/* Summary Cards */}
             <View style={styles.summaryGrid}>
               <Card style={[styles.summaryCard, darkMode && styles.cardDark]} mode="elevated">
                 <Card.Content style={styles.summaryCardContent}>
@@ -340,7 +334,6 @@ const StatisticsScreen = ({ navigation }: any) => {
               </Card>
             </View>
 
-            {/* Score Distribution */}
             <Card style={[styles.card, darkMode && styles.cardDark]} mode="elevated">
               <Card.Content>
                 <Title style={[styles.sectionTitle, darkMode && styles.textDark]}>Score Distribution</Title>
@@ -364,7 +357,6 @@ const StatisticsScreen = ({ navigation }: any) => {
               </Card.Content>
             </Card>
 
-            {/* Top Sources */}
             <Card style={[styles.card, darkMode && styles.cardDark]} mode="elevated">
               <Card.Content>
                 <Title style={[styles.sectionTitle, darkMode && styles.textDark]}>Top Sources</Title>
@@ -397,7 +389,6 @@ const StatisticsScreen = ({ navigation }: any) => {
               </Card.Content>
             </Card>
 
-            {/* Recent Activity */}
             <Card style={[styles.card, darkMode && styles.cardDark]} mode="elevated">
               <Card.Content>
                 <Title style={[styles.sectionTitle, darkMode && styles.textDark]}>Recent Activity</Title>
@@ -436,7 +427,6 @@ const StatisticsScreen = ({ navigation }: any) => {
           </>
         )}
 
-        {/* Premium Upgrade */}
         {!stats.isPremium && (
           <Card style={[styles.premiumCard, darkMode && styles.cardDark]} mode="elevated">
             <Card.Content style={styles.premiumContent}>
@@ -490,6 +480,10 @@ const styles = StyleSheet.create({
   containerDark: {
     backgroundColor: '#0A0A1A',
   },
+  statusBarSpacer: {
+    height: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: 'transparent',
+  },
   header: {
     backgroundColor: '#FFFFFF',
   },
@@ -538,7 +532,6 @@ const styles = StyleSheet.create({
   cardDark: {
     backgroundColor: '#16213E',
   },
-  // Summary Cards
   summaryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -579,7 +572,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
-  // Cards
   card: {
     marginBottom: 16,
     borderRadius: 12,
@@ -591,7 +583,6 @@ const styles = StyleSheet.create({
     color: '#1A2332',
     marginBottom: 12,
   },
-  // Distribution
   distributionItem: {
     marginBottom: 10,
   },
@@ -612,7 +603,6 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
-  // List Items
   listItem: {
     paddingHorizontal: 0,
     paddingVertical: 4,
@@ -643,7 +633,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  // Activity
   activityRight: {
     alignItems: 'flex-end',
     gap: 4,
@@ -667,7 +656,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 20,
   },
-  // Empty State
   emptyCard: {
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
@@ -701,7 +689,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  // Premium
   premiumCard: {
     marginBottom: 16,
     borderRadius: 12,

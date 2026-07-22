@@ -6,6 +6,8 @@ import {
   ScrollView,
   SafeAreaView,
   RefreshControl,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -145,6 +147,7 @@ const SourceDatabaseScreen = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.containerDark]}>
+      <View style={styles.statusBarSpacer} />
       <Surface style={[styles.header, darkMode && styles.headerDark]} elevation={2}>
         <View style={styles.headerContent}>
           <IconButton
@@ -284,6 +287,10 @@ const styles = StyleSheet.create({
   },
   containerDark: {
     backgroundColor: '#0A0A1A',
+  },
+  statusBarSpacer: {
+    height: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: 'transparent',
   },
   header: {
     backgroundColor: '#FFFFFF',
@@ -440,7 +447,6 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     paddingHorizontal: 14,
-    paddingVertical: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },

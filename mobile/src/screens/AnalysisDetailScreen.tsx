@@ -8,6 +8,8 @@ import {
   Share,
   Alert,
   Dimensions,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -59,9 +61,6 @@ interface AnalysisResult {
   url?: string;
 }
 
-/**
- * Analysis detail screen with share functionality and read full article
- */
 const AnalysisDetailScreen = ({ route, navigation }: any) => {
   const { result } = route.params as { result: AnalysisResult };
   const { darkMode } = useTheme();
@@ -621,6 +620,7 @@ const AnalysisDetailScreen = ({ route, navigation }: any) => {
 
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.containerDark]}>
+      <View style={styles.statusBarSpacer} />
       <Surface style={[styles.header, darkMode && styles.headerDark]} elevation={2}>
         <View style={styles.headerContent}>
           <IconButton
@@ -690,6 +690,10 @@ const styles = StyleSheet.create({
   },
   containerDark: {
     backgroundColor: '#0A0A1A',
+  },
+  statusBarSpacer: {
+    height: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: 'transparent',
   },
   header: {
     backgroundColor: '#FFFFFF',
@@ -767,7 +771,6 @@ const styles = StyleSheet.create({
     color: '#1A2332',
     fontSize: 12,
     paddingHorizontal: 12,
-    paddingVertical: 4,
   },
   scoreBadgeDark: {
     backgroundColor: '#1A2332',
@@ -865,20 +868,14 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   indicatorChip: {
-    height: 34,
-    borderRadius: 17,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 70,
+    borderRadius: 16,
+    paddingHorizontal: 4,
   },
   indicatorChipText: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 16,
-    paddingHorizontal: 4,
   },
   indicatorDesc: {
     fontSize: 12,
@@ -917,10 +914,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   statusChip: {
+    flex: 1,
     height: 34,
     borderRadius: 17,
     paddingHorizontal: 14,
-    paddingVertical: 6,
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 90,
@@ -929,7 +926,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
-    lineHeight: 16,
+    borderRadius: 16,
     paddingHorizontal: 4,
   },
   scoreBadgeSmall: {
@@ -991,9 +988,9 @@ const styles = StyleSheet.create({
   sourceScoreValue: {
     backgroundColor: '#6200EE',
     color: '#FFFFFF',
-    fontSize: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+       fontSize: 12,
+  borderRadius: 16,
+    paddingHorizontal: 8,
   },
   footer: {
     paddingVertical: 8,

@@ -8,6 +8,8 @@ import {
   RefreshControl,
   TouchableOpacity,
   Image,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -422,6 +424,7 @@ const DashboardScreen = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.containerDark]}>
+      <View style={styles.statusBarSpacer} />
       <View style={[styles.header, darkMode && styles.headerDark]}>
         <View style={styles.headerLeft}>
           <Text style={[styles.headerTitle, darkMode && styles.textDark]}>NewsCred</Text>
@@ -666,6 +669,10 @@ const styles = StyleSheet.create({
   },
   containerDark: {
     backgroundColor: '#0A0A1A',
+  },
+  statusBarSpacer: {
+    height: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',
@@ -931,22 +938,24 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   indicatorHeader: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   indicatorName: {
+    flex: 1,
     fontSize: 14,
     fontWeight: '500',
     color: '#1A2332',
   },
   indicatorChip: {
-    height: 26,
-    borderRadius: 12,
+    borderRadius: 16,
+    paddingHorizontal: 4,
   },
   indicatorChipText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
   },
   indicatorDesc: {
@@ -966,6 +975,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   historyTitle: {
+    flex: 1,
     fontSize: 17,
     fontWeight: 'bold',
     color: '#1A2332',
