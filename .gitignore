@@ -9,7 +9,11 @@ mobile/.env
 .DS_Store 
 Thumbs.db 
 *.log 
+<<<<<<< HEAD
 ".vscode/" 
 "mobile/" 
 "backend/src/main/resources/application-template.properties" 
 "backend/src/main/resources/application.properties" 
+=======
+.github
+>>>>>>> dd383fc426d0d1e2bd1b93a788f21e5962da0a34
