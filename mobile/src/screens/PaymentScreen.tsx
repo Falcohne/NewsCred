@@ -1,350 +1,218 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  StatusBar,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { WebView } from 'react-native-webview';
 import { useTheme } from '../context/ThemeContext';
 import {
   Card,
   Title,
   Paragraph,
-  TextInput,
   Button,
   Surface,
   IconButton,
   Snackbar,
+  List,
 } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../services/api';
 
+interface Plan {
+  name: string;
+  amountDisplay: string;
+  features: string[];
+}
+
+/**
+ * Premium upgrade via Paystack.
+ *
+ * We NEVER collect card or Mobile Money details in the app.
+ * Payment happens on Paystack's secure checkout page (WebView),
+ * and premium is granted only after the backend verifies the
+ * transaction directly with Paystack.
+ */
 const PaymentScreen = ({ navigation }: any) => {
   const { darkMode } = useTheme();
-  
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [cardHolder, setCardHolder] = useState('');
-  const [processing, setProcessing] = useState(false);
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
 
-  const showSnackbar = (message: string) => {
-    setSnackbarMessage(message);
-    setSnackbarVisible(true);
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState(true);
+  const [starting, setStarting] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [reference, setReference] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [snackbar, setSnackbar] = useState('');
+
+  useEffect(() => {
+    api
+      .get('/payments/plan')
+      .then((res) => setPlan(res.data))
+      .catch(() => setSnackbar('Could not load plan details'))
+      .finally(() => setLoadingPlan(false));
+  }, []);
+
+  const startPayment = async () => {
+    setStarting(true);
+    try {
+      const res = await api.post('/payments/initialize');
+      setReference(res.data.reference);
+      setCheckoutUrl(res.data.authorizationUrl);
+    } catch (error: any) {
+      const msg =
+        error.response?.data?.message || 'Could not start payment. Try again.';
+      setSnackbar(msg);
+    } finally {
+      setStarting(false);
+    }
   };
 
-  const formatCardNumber = (text: string) => {
-    const cleaned = text.replace(/\s/g, '');
-    const chunks = cleaned.match(/.{1,4}/g);
-    if (chunks) {
-      return chunks.join(' ');
+  const verifyPayment = async (ref: string) => {
+    setCheckoutUrl(null);
+    setVerifying(true);
+    try {
+      const res = await api.get(`/payments/verify/${ref}`);
+      if (res.data.premium) {
+        await AsyncStorage.setItem('isPremium', 'true');
+        setSnackbar('Payment successful! Welcome to Premium 🎉');
+        setTimeout(() => navigation.goBack(), 1600);
+      } else {
+        setSnackbar('Payment could not be confirmed.');
+      }
+    } catch {
+      setSnackbar('Payment was not completed. You have not been charged twice — you can retry.');
+    } finally {
+      setVerifying(false);
     }
-    return cleaned;
   };
 
-  const handlePayment = async () => {
-    const cleanCard = cardNumber.replace(/\s/g, '');
-    if (cleanCard.length < 16) {
-      showSnackbar('Please enter a valid card number (16 digits)');
-      return;
+  // Paystack redirects to a callback URL when checkout finishes.
+  const handleNavChange = (navState: any) => {
+    const url: string = navState.url || '';
+    if (
+      reference &&
+      (url.includes('callback') ||
+        url.includes('trxref=') ||
+        url.includes('reference='))
+    ) {
+      verifyPayment(reference);
     }
-    
-    if (expiryDate.length < 5) {
-      showSnackbar('Please enter a valid expiry date (MM/YY)');
-      return;
-    }
-    
-    if (cvv.length < 3) {
-      showSnackbar('Please enter a valid CVV (3 digits)');
-      return;
-    }
-    
-    if (cardHolder.length < 3) {
-      showSnackbar('Please enter the card holder name');
-      return;
-    }
-
-    setProcessing(true);
-
-    setTimeout(async () => {
-      await AsyncStorage.setItem('isPremium', 'true');
-      
-      setProcessing(false);
-      showSnackbar('Payment successful! Welcome to Premium!');
-      
-      setTimeout(() => {
-        navigation.goBack();
-      }, 1500);
-    }, 2500);
   };
+
+  // --- Checkout mode: show Paystack's page ---
+  if (checkoutUrl) {
+    return (
+      <SafeAreaView style={[styles.container, darkMode && styles.containerDark]}>
+        <View style={styles.checkoutHeader}>
+          <IconButton icon="close" onPress={() => setCheckoutUrl(null)} />
+          <Text style={[styles.checkoutTitle, darkMode && styles.textDark]}>
+            Secure Paystack Checkout
+          </Text>
+        </View>
+        <WebView
+          source={{ uri: checkoutUrl }}
+          onNavigationStateChange={handleNavChange}
+          startInLoadingState
+          renderLoading={() => (
+            <ActivityIndicator style={StyleSheet.absoluteFill} size="large" />
+          )}
+        />
+        <Button mode="text" onPress={() => reference && verifyPayment(reference)}>
+          I've completed payment — verify
+        </Button>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, darkMode && styles.containerDark]}>
-      <View style={styles.statusBarSpacer} />
-      <Surface style={[styles.header, darkMode && styles.headerDark]} elevation={2}>
-        <View style={styles.headerContent}>
-          <IconButton
-            icon="arrow-left"
-            size={24}
-            onPress={() => navigation.goBack()}
-            iconColor={darkMode ? '#FFFFFF' : '#1A2332'}
-          />
-          <Text style={[styles.headerTitle, darkMode && styles.textDark]}>Premium Upgrade</Text>
-          <View style={{ width: 48 }} />
-        </View>
-      </Surface>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Surface style={[styles.hero, darkMode && styles.heroDark]}>
+          <IconButton icon="crown" size={44} iconColor="#BA7517" />
+          <Title style={[styles.heroTitle, darkMode && styles.textDark]}>
+            NewsCred Premium
+          </Title>
+          {loadingPlan ? (
+            <ActivityIndicator />
+          ) : (
+            <Text style={styles.price}>{plan?.amountDisplay ?? ''} / month</Text>
+          )}
+        </Surface>
 
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-      >
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+        <Card style={[styles.card, darkMode && styles.cardDark]}>
+          <Card.Content>
+            <Title style={darkMode ? styles.textDark : undefined}>
+              What you get
+            </Title>
+            {(plan?.features ?? []).map((f, i) => (
+              <List.Item
+                key={i}
+                title={f}
+                titleNumberOfLines={2}
+                titleStyle={darkMode ? styles.textDark : undefined}
+                left={(props) => (
+                  <List.Icon {...props} icon="check-circle" color="#4CAF50" />
+                )}
+              />
+            ))}
+          </Card.Content>
+        </Card>
+
+        <Paragraph style={[styles.secureNote, darkMode && styles.textMutedDark]}>
+          Payments are processed securely by Paystack. Pay with card or Mobile
+          Money (MTN, Telecel, AT). We never see or store your payment details.
+        </Paragraph>
+
+        <Button
+          mode="contained"
+          onPress={startPayment}
+          loading={starting || verifying}
+          disabled={starting || verifying || loadingPlan}
+          style={styles.payButton}
+          contentStyle={{ paddingVertical: 8 }}
         >
-          <Card style={[styles.planCard, darkMode && styles.cardDark]} mode="elevated">
-            <Card.Content>
-              <View style={styles.planHeader}>
-                <Text style={[styles.planTitle, darkMode && styles.textDark]}>Premium Plan</Text>
-                <Text style={[styles.planPrice, darkMode && styles.textDark]}>GH₵ 60.00</Text>
-              </View>
-              <Text style={[styles.planPeriod, darkMode && styles.textMuted]}>per month</Text>
-              <View style={styles.planFeatures}>
-                <Text style={[styles.featureText, darkMode && styles.textMuted]}>Unlimited article analyses</Text>
-                <Text style={[styles.featureText, darkMode && styles.textMuted]}>Detailed credibility reports</Text>
-                <Text style={[styles.featureText, darkMode && styles.textMuted]}>Advanced source verification</Text>
-                <Text style={[styles.featureText, darkMode && styles.textMuted]}>Priority support</Text>
-              </View>
-            </Card.Content>
-          </Card>
-
-          <Card style={[styles.paymentCard, darkMode && styles.cardDark]} mode="elevated">
-            <Card.Content>
-              <Title style={[styles.paymentTitle, darkMode && styles.textDark]}>Payment Details</Title>
-              <Paragraph style={[styles.sandboxNote, darkMode && styles.textMuted]}>
-                Sandbox Mode: Use test card 4242 4242 4242 4242
-              </Paragraph>
-
-              <TextInput
-                label="Card Number"
-                value={cardNumber}
-                onChangeText={(text) => setCardNumber(formatCardNumber(text))}
-                mode="outlined"
-                keyboardType="numeric"
-                maxLength={19}
-                style={[styles.input, darkMode && styles.inputDark]}
-                textColor={darkMode ? '#FFFFFF' : '#1A2332'}
-                activeOutlineColor="#6200EE"
-                placeholder="4242 4242 4242 4242"
-              />
-
-              <View style={styles.row}>
-                <TextInput
-                  label="Expiry Date"
-                  value={expiryDate}
-                  onChangeText={setExpiryDate}
-                  mode="outlined"
-                  placeholder="MM/YY"
-                  maxLength={5}
-                  style={[styles.input, styles.halfInput, darkMode && styles.inputDark]}
-                  textColor={darkMode ? '#FFFFFF' : '#1A2332'}
-                  activeOutlineColor="#6200EE"
-                />
-                <TextInput
-                  label="CVV"
-                  value={cvv}
-                  onChangeText={setCvv}
-                  mode="outlined"
-                  keyboardType="numeric"
-                  maxLength={4}
-                  secureTextEntry
-                  style={[styles.input, styles.halfInput, darkMode && styles.inputDark]}
-                  textColor={darkMode ? '#FFFFFF' : '#1A2332'}
-                  activeOutlineColor="#6200EE"
-                  placeholder="123"
-                />
-              </View>
-
-              <TextInput
-                label="Card Holder Name"
-                value={cardHolder}
-                onChangeText={setCardHolder}
-                mode="outlined"
-                style={[styles.input, darkMode && styles.inputDark]}
-                textColor={darkMode ? '#FFFFFF' : '#1A2332'}
-                activeOutlineColor="#6200EE"
-                placeholder="John Doe"
-              />
-
-              <Button
-                mode="contained"
-                onPress={handlePayment}
-                loading={processing}
-                disabled={processing}
-                style={styles.payButton}
-                labelStyle={styles.payButtonLabel}
-                buttonColor="#6200EE"
-              >
-                {processing ? 'Processing...' : 'Pay GH₵ 60.00'}
-              </Button>
-
-              <Text style={[styles.sandboxInfo, darkMode && styles.textMuted]}>
-                This is a sandbox payment. No real money will be charged.
-              </Text>
-            </Card.Content>
-          </Card>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          {verifying ? 'Verifying payment…' : 'Upgrade with Paystack'}
+        </Button>
+      </ScrollView>
 
       <Snackbar
-        visible={snackbarVisible}
-        onDismiss={() => setSnackbarVisible(false)}
-        duration={3000}
-        style={styles.snackbar}
+        visible={!!snackbar}
+        onDismiss={() => setSnackbar('')}
+        duration={3500}
       >
-        <Text style={styles.snackbarText}>{snackbarMessage}</Text>
+        {snackbar}
       </Snackbar>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-  },
-  containerDark: {
-    backgroundColor: '#0A0A1A',
-  },
-  statusBarSpacer: {
-    height: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-    backgroundColor: 'transparent',
-  },
-  header: {
-    backgroundColor: '#FFFFFF',
-  },
-  headerDark: {
-    backgroundColor: '#16213E',
-  },
-  headerContent: {
-    flexDirection: 'row',
+  container: { flex: 1, backgroundColor: '#FAF7F0' },
+  containerDark: { backgroundColor: '#10141C' },
+  scrollContent: { padding: 16, paddingBottom: 40 },
+  hero: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A2332',
-  },
-  textDark: {
-    color: '#FFFFFF',
-  },
-  textMuted: {
-    color: '#7F8C8D',
-  },
-  cardDark: {
-    backgroundColor: '#16213E',
-  },
-  inputDark: {
-    backgroundColor: 'transparent',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  planCard: {
+    padding: 24,
+    borderRadius: 20,
     marginBottom: 16,
-    borderRadius: 12,
     backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E0D4',
   },
-  planHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  planTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1A2332',
-  },
-  planPrice: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#6200EE',
-  },
-  planPeriod: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    marginBottom: 12,
-  },
-  planFeatures: {
-    marginTop: 8,
-  },
-  featureText: {
-    fontSize: 14,
-    color: '#4A5568',
-    marginBottom: 6,
-  },
-  paymentCard: {
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  paymentTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: '#1A2332',
-    marginBottom: 4,
-  },
-  sandboxNote: {
-    fontSize: 13,
-    color: '#7F8C8D',
-    marginBottom: 16,
-  },
-  input: {
-    marginBottom: 12,
-    backgroundColor: 'transparent',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  halfInput: {
-    flex: 1,
-  },
-  payButton: {
-    borderRadius: 8,
-    paddingVertical: 4,
-    marginTop: 8,
-  },
-  payButtonLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    paddingVertical: 4,
-  },
-  sandboxInfo: {
-    fontSize: 12,
-    color: '#A0AEC0',
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  snackbar: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  snackbarText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-  },
+  heroDark: { backgroundColor: '#1A2029', borderColor: '#2A313C' },
+  heroTitle: { fontSize: 24, fontWeight: '700' },
+  price: { fontSize: 20, fontWeight: '700', color: '#0F6E56', marginTop: 4 },
+  card: { borderRadius: 20, marginBottom: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E0D4' },
+  cardDark: { backgroundColor: '#1A2029', borderColor: '#2A313C' },
+  secureNote: { textAlign: 'center', fontSize: 12, marginBottom: 16, color: '#666' },
+  textMutedDark: { color: '#AAA' },
+  textDark: { color: '#FFFFFF' },
+  payButton: { borderRadius: 30 },
+  checkoutHeader: { flexDirection: 'row', alignItems: 'center' },
+  checkoutTitle: { fontSize: 16, fontWeight: '600' },
 });
 
 export default PaymentScreen;

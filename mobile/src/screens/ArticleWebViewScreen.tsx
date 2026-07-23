@@ -3,11 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Linking,
   Platform,
   StatusBar,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -100,7 +100,7 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
       startInLoadingState={true}
       renderLoading={() => (
         <View style={[styles.loadingContainer, darkMode && styles.loadingContainerDark]}>
-          <PaperActivityIndicator size="large" color="#6200EE" />
+          <PaperActivityIndicator size="large" color="#0F6E56" />
           <Text style={[styles.loadingText, darkMode && styles.textDark]}>
             Loading article...
           </Text>
@@ -116,7 +116,7 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
       showsVerticalScrollIndicator={true}
       injectedJavaScript={`
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          document.body.style.backgroundColor = '#0A0A1A';
+          document.body.style.backgroundColor = '#10141C';
           document.body.style.color = '#FFFFFF';
         }
         true;
@@ -142,7 +142,7 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
           mode="contained"
           onPress={reload}
           style={styles.errorButton}
-          buttonColor="#6200EE"
+          buttonColor="#0F6E56"
           labelStyle={styles.errorButtonLabel}
         >
           Try Again
@@ -168,7 +168,7 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
             icon="arrow-left"
             size={24}
             onPress={() => navigation.goBack()}
-            iconColor={darkMode ? '#FFFFFF' : '#1A2332'}
+            iconColor={darkMode ? '#FFFFFF' : '#1A1A16'}
           />
           <Text style={[styles.headerTitle, darkMode && styles.textDark]} numberOfLines={1}>
             {title || 'Article'}
@@ -178,13 +178,13 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
               icon="reload"
               size={24}
               onPress={reload}
-              iconColor={darkMode ? '#FFFFFF' : '#1A2332'}
+              iconColor={darkMode ? '#FFFFFF' : '#1A1A16'}
             />
             <IconButton
               icon="open-in-new"
               size={24}
               onPress={openInBrowser}
-              iconColor={darkMode ? '#FFFFFF' : '#1A2332'}
+              iconColor={darkMode ? '#FFFFFF' : '#1A1A16'}
             />
           </View>
         </View>
@@ -194,14 +194,14 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
             size={20}
             onPress={goBack}
             disabled={!canGoBack}
-            iconColor={canGoBack ? (darkMode ? '#FFFFFF' : '#1A2332') : '#666666'}
+            iconColor={canGoBack ? (darkMode ? '#FFFFFF' : '#1A1A16') : '#666666'}
           />
           <IconButton
             icon="chevron-right"
             size={20}
             onPress={goForward}
             disabled={!canGoForward}
-            iconColor={canGoForward ? (darkMode ? '#FFFFFF' : '#1A2332') : '#666666'}
+            iconColor={canGoForward ? (darkMode ? '#FFFFFF' : '#1A1A16') : '#666666'}
           />
           <Text style={[styles.navText, darkMode && styles.textMuted]}>
             {loading ? 'Loading...' : 'Ready'}
@@ -217,10 +217,10 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#FAF7F0',
   },
   containerDark: {
-    backgroundColor: '#0A0A1A',
+    backgroundColor: '#10141C',
   },
   statusBarSpacer: {
     height: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   headerDark: {
-    backgroundColor: '#16213E',
+    backgroundColor: '#1A2029',
   },
   headerContent: {
     flexDirection: 'row',
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: '#1A2332',
+    color: '#1A1A16',
     marginHorizontal: 8,
   },
   textDark: {
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#F0F0F0',
   },
   navBarDark: {
-    borderTopColor: '#333333',
+    borderTopColor: '#2A313C',
   },
   navText: {
     fontSize: 12,
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   webViewDark: {
-    backgroundColor: '#1A2332',
+    backgroundColor: '#1A1A16',
   },
   loadingContainer: {
     flex: 1,
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   loadingContainerDark: {
-    backgroundColor: '#1A2332',
+    backgroundColor: '#1A1A16',
   },
   loadingText: {
     marginTop: 16,
@@ -301,12 +301,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   errorContainerDark: {
-    backgroundColor: '#16213E',
+    backgroundColor: '#1A2029',
   },
   errorTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1A2332',
+    color: '#1A1A16',
     marginTop: 12,
     marginBottom: 8,
   },
@@ -329,10 +329,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   errorButtonOutline: {
-    borderColor: '#6200EE',
+    borderColor: '#0F6E56',
   },
   errorButtonOutlineLabel: {
-    color: '#6200EE',
+    color: '#0F6E56',
   },
 });
 
