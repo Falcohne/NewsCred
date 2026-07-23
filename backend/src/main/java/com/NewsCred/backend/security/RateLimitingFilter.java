@@ -1,7 +1,10 @@
 package com.NewsCred.backend.security;
 
 import com.NewsCred.backend.config.RateLimitingConfig;
+import com.NewsCred.backend.entity.User;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -11,6 +14,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+/**
+ * Rate limiting filter.
+ *
+ * SECURITY: identity and premium status are taken from the authenticated
+ * principal (set by JwtAuthenticationFilter, which runs BEFORE this filter).
+ * Client-supplied headers like X-User-Id / X-User-Premium are ignored,
+ * because anything the client sends can be spoofed.
+ */
 @Component
 public class RateLimitingFilter extends OncePerRequestFilter {
 
@@ -27,23 +38,19 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getRequestURI();
-        if (!path.startsWith("/api/")) {
+        if (!path.startsWith("/api/") || path.startsWith("/api/auth/")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        if (path.startsWith("/api/auth/")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+        String key = getClientIp(request);
+        boolean isPremium = false;
 
-        String clientIp = getClientIp(request);
-        boolean isPremium = Boolean.parseBoolean(request.getHeader("X-User-Premium"));
-        
-        String key = clientIp;
-        String userId = request.getHeader("X-User-Id");
-        if (userId != null && !userId.isEmpty()) {
-            key = "user:" + userId;
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof User) {
+            User user = (User) auth.getPrincipal();
+            key = "user:" + user.getId();
+            isPremium = user.isPremium();
         }
 
         if (rateLimitingConfig.allowRequest(key, isPremium)) {
@@ -62,11 +69,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getRemoteAddr();
         }
-        
         if (ip == null || ip.isEmpty() || "0:0:0:0:0:0:0:1".equals(ip)) {
             ip = "127.0.0.1";
         }
-        
         return ip;
     }
 }

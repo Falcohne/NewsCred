@@ -10,11 +10,7 @@ import java.util.regex.Pattern;
 @Service
 public class AuthorCredibilityService {
 
-    private static final List<String> TRUSTED_AUTHORS = Arrays.asList(
-        "john smith", "jane doe", "michael brown", "sarah wilson", "david miller",
-        "emily davis", "james anderson", "maria garcia", "robert johnson", "lisa thomas",
-        "chris evans", "emma watson", "tom hanks", "meryl streep", "denzel washington"
-    );
+
 
     private static final List<String> REPUTABLE_ORGANIZATIONS = Arrays.asList(
         "bbc", "reuters", "ap", "associated press", "the guardian", "new york times",
@@ -49,21 +45,27 @@ public class AuthorCredibilityService {
         }
         
         String lowerName = authorName.toLowerCase();
-        boolean isTrusted = TRUSTED_AUTHORS.stream()
-            .anyMatch(lowerName::contains);
-        
-        if (isTrusted) {
-            result.setScore(0.9);
-            result.setStatus("TRUSTED");
-            result.setMessage("This author is known and trusted.");
-            result.setRecommendation("The author is reputable.");
+        // Honest heuristic: we cannot verify individual authors offline.
+        // A named byline is a positive transparency signal; affiliation with a
+        // reputable organization strengthens it. We never claim an author is
+        // personally "trusted" - only that the article is transparent about
+        // who wrote it.
+        String lowerContent2 = content.toLowerCase();
+        boolean orgAffiliated = REPUTABLE_ORGANIZATIONS.stream()
+            .anyMatch(lowerContent2::contains);
+
+        if (orgAffiliated) {
+            result.setScore(0.8);
+            result.setStatus("NAMED_WITH_ORG");
+            result.setMessage("Article has a named author and references a reputable organization.");
+            result.setRecommendation("Good transparency. You can look up this author's other work to verify further.");
         } else {
-            result.setScore(0.5);
-            result.setStatus("UNKNOWN_AUTHOR");
-            result.setMessage("Author not in our trusted database.");
-            result.setRecommendation("Unknown author. Verify their credentials.");
+            result.setScore(0.6);
+            result.setStatus("NAMED_AUTHOR");
+            result.setMessage("Article has a named author, which is a positive transparency signal.");
+            result.setRecommendation("Author identity could not be independently verified. Consider searching for their other published work.");
         }
-        
+
         return result;
     }
 

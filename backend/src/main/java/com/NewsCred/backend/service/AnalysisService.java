@@ -4,6 +4,9 @@ import com.NewsCred.backend.entity.Article;
 import com.NewsCred.backend.repository.ArticleRepository;
 import com.NewsCred.backend.service.DateVerificationService.DateVerificationResult;
 import com.NewsCred.backend.service.FactCheckService.FactCheckResult;
+import com.NewsCred.backend.service.GoogleFactCheckService.ExternalFactCheckResult;
+import com.NewsCred.backend.service.GoogleFactCheckService.ExternalClaimMatch;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,10 +19,15 @@ public class AnalysisService {
     private final DateVerificationService dateVerificationService;
     private final AuthorCredibilityService authorCredibilityService;
     private final ImageVerificationService imageVerificationService;
+    private final GoogleFactCheckService googleFactCheckService;
+    private final FactCheckApiService factCheckApiService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // Weights: live/heuristic fact-checking carries the most weight now
+    // that it is backed by a real external verification source.
     private static final double ORIGINAL_WEIGHT = 0.35;
-    private static final double FACT_CHECK_WEIGHT = 0.25;
-    private static final double DATE_WEIGHT = 0.15;
+    private static final double FACT_CHECK_WEIGHT = 0.30;
+    private static final double DATE_WEIGHT = 0.10;
     private static final double AUTHOR_WEIGHT = 0.15;
     private static final double IMAGE_WEIGHT = 0.10;
 
@@ -28,13 +36,17 @@ public class AnalysisService {
                            SummarizationService summarizationService,
                            DateVerificationService dateVerificationService,
                            AuthorCredibilityService authorCredibilityService,
-                           ImageVerificationService imageVerificationService) {
+                           ImageVerificationService imageVerificationService,
+                           GoogleFactCheckService googleFactCheckService,
+                           FactCheckApiService factCheckApiService) {
         this.articleRepository = articleRepository;
         this.factCheckService = factCheckService;
         this.summarizationService = summarizationService;
         this.dateVerificationService = dateVerificationService;
         this.authorCredibilityService = authorCredibilityService;
         this.imageVerificationService = imageVerificationService;
+        this.googleFactCheckService = googleFactCheckService;
+        this.factCheckApiService = factCheckApiService;
     }
 
     @Transactional
@@ -87,6 +99,21 @@ public class AnalysisService {
             article.getSourceName()
         );
 
+        // LIVE VERIFICATION: check extracted claims against the global
+        // fact-check database (Google Fact Check Tools API). Degrades
+        // gracefully if no API key or no internet.
+        java.util.List<String> extractedClaims =
+            factCheckApiService.extractClaims(article.getContent());
+        ExternalFactCheckResult externalResult =
+            googleFactCheckService.checkClaims(extractedClaims);
+
+        try {
+            article.setFactCheckDetails(
+                objectMapper.writeValueAsString(externalResult.getMatches()));
+        } catch (Exception e) {
+            article.setFactCheckDetails("[]");
+        }
+
         String sourceReliability = factCheckResult.getSourceReliability();
         article.setSourceReliability(sourceReliability);
 
@@ -111,6 +138,13 @@ public class AnalysisService {
         );
         
         double factCheckConfidence = factCheckResult.getOverallConfidence() * 100;
+
+        // Blend in live fact-check matches when we have them: published
+        // fact-checker verdicts outweigh our local linguistic heuristics.
+        double externalAvg = externalResult.averageRatingScore();
+        if (externalAvg >= 0) {
+            factCheckConfidence = (factCheckConfidence * 0.4) + (externalAvg * 100 * 0.6);
+        }
         
         double dateScore = dateResult != null ? dateResult.getScore() * 100 : 50;
         
@@ -125,6 +159,13 @@ public class AnalysisService {
                               (imageScore * IMAGE_WEIGHT);
         
         overallScore = Math.min(Math.max(overallScore, 0), 100);
+
+        // Hard cap: if a professional fact-checker has rated a matched
+        // claim as false, this article cannot score above 40 regardless
+        // of how well-written it is.
+        if (externalResult.hasFalseMatch()) {
+            overallScore = Math.min(overallScore, 40);
+        }
         article.setOverallScore(overallScore);
 
         String confidenceLevel = factCheckResult.getConfidenceLabel();
@@ -135,7 +176,7 @@ public class AnalysisService {
 
         String analysisSummary = generateSummaryWithAllVerifications(
             verdict, overallScore, sourceReliability, factCheckResult, 
-            contentSummary, dateResult, authorResult, imageResult
+            contentSummary, dateResult, authorResult, imageResult, externalResult
         );
         article.setAnalysisSummary(analysisSummary);
 
@@ -252,14 +293,15 @@ public class AnalysisService {
                                                  String contentSummary,
                                                  DateVerificationResult dateResult,
                                                  AuthorCredibilityService.AuthorCredibilityResult authorResult,
-                                                 ImageVerificationService.ImageVerificationResult imageResult) {
+                                                 ImageVerificationService.ImageVerificationResult imageResult,
+                                                 ExternalFactCheckResult externalResult) {
         StringBuilder summary = new StringBuilder();
         summary.append("ARTICLE SUMMARY\n\n");
         summary.append(contentSummary).append("\n\n");
         
         summary.append("CREDIBILITY ANALYSIS\n\n");
-        summary.append("Based on comprehensive analysis including 6 credibility indicators, ");
-        summary.append("fact-check verification, date verification, author credibility check, ");
+        summary.append("Based on 6 linguistic credibility indicators, live fact-check ");
+        summary.append("database verification, date verification, author transparency check, ");
         summary.append("and image verification, this article is ");
         summary.append(verdict.toLowerCase().replace("_", " ")).append(" with a score of ");
         summary.append(String.format("%.1f", score)).append("%.\n\n");
@@ -312,6 +354,27 @@ public class AnalysisService {
             summary.append(imageResult.getMessage()).append("\n");
         }
         
+        summary.append("\nLIVE FACT-CHECK VERIFICATION:\n");
+        if (!externalResult.isAttempted()) {
+            summary.append("Live verification not configured on this server.\n");
+        } else if (!externalResult.isAvailable()) {
+            summary.append("Live verification unavailable (no connection). Analysis is based on local signals only.\n");
+        } else if (externalResult.getMatches().isEmpty()) {
+            summary.append("No published fact-checks matched this article's claims. ");
+            summary.append("This is neutral: it does not prove the claims are true or false.\n");
+        } else {
+            summary.append(externalResult.getMatches().size())
+                   .append(" related fact-check(s) found in the global database:\n");
+            for (ExternalClaimMatch m : externalResult.getMatches()) {
+                summary.append("- ").append(m.getPublisher())
+                       .append(" rated a matching claim: \"").append(m.getRating()).append("\"\n");
+                summary.append("  Claim: ").append(m.getMatchedClaim()).append("\n");
+                if (m.getReviewUrl() != null && !m.getReviewUrl().isEmpty()) {
+                    summary.append("  Source: ").append(m.getReviewUrl()).append("\n");
+                }
+            }
+        }
+
         summary.append("\nRECOMMENDATION: ").append(factCheck.getRecommendation());
         
         return summary.toString();

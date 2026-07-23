@@ -266,11 +266,11 @@ public class ImageVerificationService {
         }
         
         if (result.isHasManipulationSigns()) {
-            message.append("Signs of image manipulation detected. ");
+            message.append("Some image filenames/URLs contain editing-related terms (URL-based signal only). ");
         }
         
         if (result.isHasAIIndicators()) {
-            message.append("Some images may be AI-generated. ");
+            message.append("Some image URLs reference AI-generation tools (URL-based signal only). ");
         }
         
         if (result.getStockPhotoCount() > 0) {
@@ -278,11 +278,11 @@ public class ImageVerificationService {
         }
         
         if (result.getAIIndicatorCount() > 0) {
-            message.append(result.getAIIndicatorCount()).append(" image(s) show AI generation indicators. ");
+            message.append(result.getAIIndicatorCount()).append(" image URL(s) reference AI tools. ");
         }
         
         if (result.getManipulationCount() > 0) {
-            message.append(result.getManipulationCount()).append(" image(s) show manipulation signs. ");
+            message.append(result.getManipulationCount()).append(" image URL(s) contain editing-related terms. ");
         }
         
         return message.toString();
@@ -298,7 +298,7 @@ public class ImageVerificationService {
         } else if (result.getScore() >= 0.4) {
             return "Images may not be authentic. Consider verifying with reverse image search.";
         } else {
-            return "Images show signs of manipulation or AI generation. Exercise caution.";
+            return "Image URLs contain AI/editing-related terms. This is a weak, URL-based signal - verify images with a reverse image search.";
         }
     }
 

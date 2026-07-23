@@ -2,14 +2,10 @@ package com.NewsCred.backend.service;
 
 import com.NewsCred.backend.entity.User;
 import com.NewsCred.backend.repository.UserRepository;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
-import java.util.Collections;
-import java.util.List;
 
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
@@ -20,6 +16,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * IMPORTANT: we return our User ENTITY directly (it implements
+     * UserDetails). This makes @AuthenticationPrincipal User work in
+     * controllers, giving them access to id, premium status, and
+     * analysisCount. Wrapping it in Spring's generic User class would
+     * make @AuthenticationPrincipal resolve to null.
+     */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(username)
@@ -27,25 +30,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
         if (user == null) {
             user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with username or email: " + username));
+                .orElseThrow(() -> new UsernameNotFoundException(
+                    "User not found with username or email: " + username));
         }
 
-        List<SimpleGrantedAuthority> authorities = Collections.singletonList(
-            new SimpleGrantedAuthority("ROLE_USER")
-        );
-
-        if (user.isPremium()) {
-            authorities = List.of(
-                new SimpleGrantedAuthority("ROLE_USER"),
-                new SimpleGrantedAuthority("ROLE_PREMIUM")
-            );
-        }
-
-        return new org.springframework.security.core.userdetails.User(
-            user.getEmail(),
-            user.getPassword(),
-            authorities
-        );
+        return user;
     }
 
     public User loadUserById(String id) {

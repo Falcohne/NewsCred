@@ -59,6 +59,10 @@ public class Article {
     @Column(name = "content_summary", columnDefinition = "TEXT")
     private String contentSummary;
 
+    /** JSON array of live fact-check matches (publisher, rating, url). */
+    @Column(name = "fact_check_details", columnDefinition = "TEXT")
+    private String factCheckDetails;
+
     @Column(name = "user_id")
     private String userId;
 
@@ -218,4 +222,7 @@ public class Article {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getFactCheckDetails() { return factCheckDetails; }
+    public void setFactCheckDetails(String factCheckDetails) { this.factCheckDetails = factCheckDetails; }
 }

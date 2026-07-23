@@ -15,6 +15,7 @@ public class ArticleAnalysisResponse {
     private String credibilityVerdict;
     private String analysisSummary;
     private String contentSummary;
+    private String factCheckDetails;
     private String sourceReliability;
     private String contentQuality;
     private String evidenceQuality;
@@ -46,7 +47,8 @@ public class ArticleAnalysisResponse {
         response.setConfidenceLevel(article.getConfidenceLevel());
         response.setCredibilityVerdict(article.getCredibilityVerdict());
         response.setAnalysisSummary(article.getAnalysisSummary());
-        response.setContentSummary(article.getSummary());
+        response.setContentSummary(article.getContentSummary());
+        response.setFactCheckDetails(article.getFactCheckDetails());
         response.setSourceReliability(article.getSourceReliability());
         response.setContentQuality(article.getContentQuality());
         response.setEvidenceQuality(article.getEvidenceQuality());
@@ -127,4 +129,7 @@ public class ArticleAnalysisResponse {
     public void setAuthorStatus(String authorStatus) { this.authorStatus = authorStatus; }
     public String getAuthorMessage() { return authorMessage; }
     public void setAuthorMessage(String authorMessage) { this.authorMessage = authorMessage; }
+
+    public String getFactCheckDetails() { return factCheckDetails; }
+    public void setFactCheckDetails(String factCheckDetails) { this.factCheckDetails = factCheckDetails; }
 }

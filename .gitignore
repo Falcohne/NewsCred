@@ -1,19 +1,28 @@
-backend/target/ 
-backend/.idea/ 
-backend/*.iml 
-mobile/node_modules/ 
-mobile/.expo/ 
-mobile/dist/ 
-mobile/web-build/ 
-mobile/.env 
-.DS_Store 
-Thumbs.db 
-*.log 
-<<<<<<< HEAD
-".vscode/" 
-"mobile/" 
-"backend/src/main/resources/application-template.properties" 
-"backend/src/main/resources/application.properties" 
-=======
-.github
->>>>>>> dd383fc426d0d1e2bd1b93a788f21e5962da0a34
+# --- Build artifacts ---
+backend/target/
+backend/*.iml
+backend/.idea/
+backend/.classpath
+backend/.project
+backend/.settings/
+
+# --- Mobile ---
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/.env
+
+# --- Secrets (NEVER commit real config) ---
+backend/src/main/resources/application.properties
+backend/src/main/resources/application-*.properties
+!backend/src/main/resources/application-template.properties
+.env
+*.env
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

@@ -49,7 +49,9 @@ public class SecurityConfig {
             .cors().configurationSource(corsConfigurationSource())
             .and()
 
-            .headers().disable()
+            .headers()
+                .frameOptions().deny()
+                .and()
 
             .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -66,8 +68,8 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             .and()
 
-            .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(rateLimitingFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
