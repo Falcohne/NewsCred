@@ -9,6 +9,7 @@ public class AuthResponse {
     private boolean premium;
     private int analysisCount;
     private boolean emailSent;
+    private boolean isAdmin;
 
     public AuthResponse(String token, String userId, String email, String fullName, boolean premium, int analysisCount) {
         this.token = token;
@@ -29,6 +30,11 @@ public class AuthResponse {
         this.premium = premium;
         this.analysisCount = analysisCount;
         this.emailSent = false;
+    }
+
+    public AuthResponse(String token, String refreshToken, String userId, String email, String fullName, boolean premium, int analysisCount, boolean isAdmin) {
+        this(token, refreshToken, userId, email, fullName, premium, analysisCount);
+        this.isAdmin = isAdmin;
     }
 
     public String getToken() { return token; }
@@ -54,4 +60,7 @@ public class AuthResponse {
 
     public boolean isEmailSent() { return emailSent; }
     public void setEmailSent(boolean emailSent) { this.emailSent = emailSent; }
+
+    public boolean isAdmin() { return isAdmin; }
+    public void setAdmin(boolean admin) { this.isAdmin = admin; }
 }

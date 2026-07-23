@@ -42,17 +42,21 @@ public class AuthService {
     private static final int MAX_LOGIN_ATTEMPTS = 5;
     private static final long LOCKOUT_DURATION_MINUTES = 15;
 
+    private final AdminAccessService adminAccessService;
+
     public AuthService(UserRepository userRepository,
                        ArticleRepository articleRepository,
                        VerificationTokenRepository verificationTokenRepository,
                        JwtUtil jwtUtil,
-                       PasswordValidator passwordValidator) {
+                       PasswordValidator passwordValidator,
+                       AdminAccessService adminAccessService) {
         this.userRepository = userRepository;
         this.articleRepository = articleRepository;
         this.verificationTokenRepository = verificationTokenRepository;
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = new BCryptPasswordEncoder(12);
         this.passwordValidator = passwordValidator;
+        this.adminAccessService = adminAccessService;
     }
 
     public AuthResponse register(AuthRequest request) {
@@ -123,6 +127,8 @@ public class AuthService {
 
         loginAttempts.remove(loginIdentifier);
 
+        adminAccessService.syncAdminStatus(user);
+
         String token = jwtUtil.generateToken(user.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
@@ -133,7 +139,8 @@ public class AuthService {
             user.getEmail(),
             user.getFullName(),
             user.isPremium(),
-            user.getAnalysisCount()
+            user.getAnalysisCount(),
+            user.isAdmin()
         );
     }
 

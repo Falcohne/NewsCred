@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NewsCred — The Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #FAF7F0;
+    --card: #FFFFFF;
+    --line: #E5E0D4;
+    --ink: #1A1A16;
+    --ink-muted: #6B6858;
+    --hint: #A19D8E;
+    --teal: #0F6E56;
+    --teal-soft: #E1F5EE;
+    --good: #2F6D2F;
+    --good-bg: #EAF3DE;
+    --warn: #BA7517;
+    --warn-bg: #FAEEDA;
+    --bad: #A32D2D;
+    --bad-bg: #FCEBEB;
+    --serif: 'Source Serif 4', Georgia, serif;
+    --sans: 'Inter', -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--sans); -webkit-font-smoothing: antialiased;
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  /* ---------- Login ---------- */
+  #login-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .login-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 40px 36px; width: 100%; max-width: 380px; text-align: center;
+    animation: rise .5s ease both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .login-mark { font-family: var(--serif); font-weight: 700; font-size: 15px; letter-spacing: 3px; color: var(--teal); text-transform: uppercase; }
+  .login-title { font-family: var(--serif); font-weight: 600; font-size: 26px; margin: 6px 0 4px; }
+  .login-sub { font-size: 13px; color: var(--ink-muted); margin-bottom: 26px; }
+  .field { text-align: left; margin-bottom: 14px; }
+  .field label { display: block; font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
+  .field input {
+    width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px;
+    font-size: 14px; font-family: var(--sans); background: var(--card); color: var(--ink);
+  }
+  .field input:focus { outline: 2px solid var(--teal); outline-offset: 1px; }
+  .btn-primary {
+    width: 100%; padding: 12px; border: none; border-radius: 24px; background: var(--teal);
+    color: #fff; font-size: 14px; font-weight: 700; font-family: var(--sans); cursor: pointer; margin-top: 6px;
+  }
+  .btn-primary:hover { opacity: .92; }
+  .btn-primary:disabled { opacity: .6; cursor: default; }
+  .password-row { position: relative; }
+  .password-row input { padding-right: 56px; }
+  .show-toggle {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--teal); font-size: 11.5px;
+    font-weight: 700; font-family: var(--sans); cursor: pointer; padding: 4px;
+  }
+  .login-error {
+    background: var(--bad-bg); color: var(--bad); font-size: 12.5px; padding: 10px 12px;
+    border-radius: 10px; margin-bottom: 14px; text-align: left; display: none;
+  }
+  .server-toggle { margin-top: 20px; font-size: 11.5px; color: var(--hint); cursor: pointer; text-decoration: underline; background: none; border: none; font-family: var(--sans); }
+  .server-field { display: none; text-align: left; margin-top: 10px; }
+
+  /* ---------- Dashboard shell ---------- */
+  #dashboard { display: none; max-width: 1160px; margin: 0 auto; padding: 28px 24px 60px; }
+  .masthead { text-align: center; border-bottom: 3px solid var(--ink); padding-bottom: 14px; margin-bottom: 26px; animation: rise .5s ease both; }
+  .dateline { font-size: 11px; letter-spacing: 1.6px; color: var(--hint); text-transform: uppercase; }
+  .masthead h1 { font-family: var(--serif); font-weight: 700; font-size: 40px; margin: 4px 0 2px; letter-spacing: -0.5px; }
+  .masthead .kicker { font-size: 12.5px; color: var(--ink-muted); font-style: italic; }
+  .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .logout-btn {
+    background: none; border: 1px solid var(--line); border-radius: 20px; padding: 6px 16px;
+    font-size: 12px; color: var(--ink-muted); cursor: pointer; font-family: var(--sans); font-weight: 600;
+  }
+  .logout-btn:hover { border-color: var(--bad); color: var(--bad); }
+  .refresh-note { font-size: 11.5px; color: var(--hint); }
+
+  /* ---------- Signature: platform trust bar ---------- */
+  .trust-section { margin-bottom: 30px; animation: rise .6s ease both .05s; }
+  .trust-label { font-family: var(--serif); font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+  .trust-bar { display: flex; width: 100%; height: 34px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+  .trust-seg { height: 100%; transition: width .6s ease; }
+  .trust-legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 10px; }
+  .trust-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-muted); }
+  .trust-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ---------- Stat strip ---------- */
+  .stat-strip {
+    display: flex; flex-wrap: wrap; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    padding: 18px 0; margin-bottom: 30px; animation: rise .6s ease both .1s;
+  }
+  .stat { flex: 1; min-width: 130px; text-align: center; padding: 0 10px; border-right: 1px solid var(--line); }
+  .stat:last-child { border-right: none; }
+  .stat-value { font-family: var(--serif); font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat-label { font-size: 10.5px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .6px; margin-top: 3px; }
+
+  /* ---------- Two-column grid ---------- */
+  .grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 22px; margin-bottom: 30px; }
+  @media (max-width: 760px) { .grid-2 { grid-template-columns: 1fr; } }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; animation: rise .6s ease both .15s; }
+  .panel h2 { font-family: var(--serif); font-size: 16px; font-weight: 600; margin: 0 0 14px; }
+  .panel .empty { font-size: 12.5px; color: var(--hint); padding: 10px 0; }
+
+  table.leaderboard { width: 100%; border-collapse: collapse; }
+  table.leaderboard th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--hint); font-weight: 600; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  table.leaderboard td { padding: 9px 0; font-size: 13px; border-bottom: 1px solid var(--line); }
+  table.leaderboard tr:last-child td { border-bottom: none; }
+  .rank { color: var(--hint); font-family: var(--serif); font-weight: 600; width: 26px; }
+  .score-pill { display: inline-block; min-width: 30px; text-align: center; padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 12px; }
+
+  .health-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .health-row:last-child { border-bottom: none; }
+  .health-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+
+  /* ---------- Activity wire feed ---------- */
+  .wire-section { margin-bottom: 20px; animation: rise .6s ease both .2s; }
+  .wire-section h2 { font-family: var(--serif); font-size: 18px; font-weight: 600; border-bottom: 2px solid var(--ink); padding-bottom: 8px; margin-bottom: 0; }
+  .wire-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
+  @media (max-width: 760px) { .wire-grid { grid-template-columns: 1fr; } }
+  .wire-col { padding: 16px 18px; border-right: 1px solid var(--line); }
+  .wire-col:last-child { border-right: none; }
+  @media (max-width: 760px) { .wire-col { border-right: none; border-bottom: 1px solid var(--line); } }
+  .wire-col h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--ink-muted); margin: 0 0 12px; }
+  .wire-item { padding: 9px 0; border-bottom: 1px dotted var(--line); font-size: 12.5px; }
+  .wire-item:last-child { border-bottom: none; }
+  .wire-item .title { font-weight: 600; color: var(--ink); display: block; margin-bottom: 2px; }
+  .wire-item .meta { color: var(--ink-muted); font-size: 11.5px; }
+  .wire-empty { font-size: 12px; color: var(--hint); }
+
+  
+  /* ---------- Tabs ---------- */
+  .tabs { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+  .tab-btn {
+    background: none; border: none; padding: 10px 16px; font-size: 13px; font-weight: 600;
+    color: var(--ink-muted); cursor: pointer; font-family: var(--sans); border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab-btn.active { color: var(--teal); border-bottom-color: var(--teal); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: rise .4s ease both; }
+
+  /* ---------- Weekly trend ---------- */
+  .trend-chart { display: flex; align-items: flex-end; gap: 8px; height: 90px; padding-top: 10px; }
+  .trend-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .trend-bar { width: 100%; background: var(--teal); border-radius: 4px 4px 0 0; min-height: 3px; transition: height .5s ease; }
+  .trend-day { font-size: 10px; color: var(--hint); margin-top: 6px; }
+  .trend-count { font-size: 10.5px; color: var(--ink-muted); font-weight: 600; margin-bottom: 3px; }
+
+  /* ---------- Directory table ---------- */
+  .toolbar { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
+  .search-input {
+    flex: 1; min-width: 180px; padding: 9px 13px; border: 1px solid var(--line); border-radius: 20px;
+    font-size: 13px; font-family: var(--sans); background: var(--card); color: var(--ink);
+  }
+  .btn-outline {
+    background: none; border: 1px solid var(--line); border-radius: 20px; padding: 8px 16px;
+    font-size: 12.5px; font-weight: 600; color: var(--ink); cursor: pointer; font-family: var(--sans);
+  }
+  .btn-outline:hover { border-color: var(--teal); color: var(--teal); }
+  table.directory { width: 100%; border-collapse: collapse; }
+  table.directory th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--hint); font-weight: 600; padding: 0 8px 8px 0; border-bottom: 1px solid var(--line); }
+  table.directory td { padding: 10px 8px 10px 0; font-size: 13px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .email-cell { font-variant-numeric: tabular-nums; color: var(--ink-muted); }
+  .link-btn { background: none; border: none; color: var(--teal); font-size: 11.5px; font-weight: 700; cursor: pointer; font-family: var(--sans); padding: 0; margin-left: 6px; }
+  .badge { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 9px; border-radius: 10px; }
+  .badge-premium { background: var(--teal-soft); color: var(--teal); }
+  .badge-free { background: #EFEAE0; color: var(--ink-muted); }
+  .badge-admin { background: #EDE3F8; color: #6B3FA0; margin-left: 4px; }
+  .toggle-switch { position: relative; width: 38px; height: 21px; border-radius: 11px; background: var(--line); border: none; cursor: pointer; }
+  .toggle-switch.on { background: var(--teal); }
+  .toggle-knob { position: absolute; top: 2px; left: 2px; width: 17px; height: 17px; border-radius: 50%; background: #fff; transition: left .2s ease; }
+  .toggle-switch.on .toggle-knob { left: 19px; }
+
+  .flag-item { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .flag-item:last-child { border-bottom: none; }
+  .flag-title { font-weight: 600; font-size: 13.5px; }
+  .flag-meta { font-size: 11.5px; color: var(--ink-muted); margin-top: 3px; }
+  .flag-score { display: inline-block; background: var(--bad-bg); color: var(--bad); font-weight: 700; font-size: 11.5px; padding: 2px 9px; border-radius: 10px; margin-right: 6px; }
+
+  .footer-note { text-align: center; font-size: 11px; color: var(--hint); margin-top: 34px; }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-mark">NewsCred</div>
+    <div class="login-title">The Desk</div>
+    <div class="login-sub">Admin access · sign in with your NewsCred account</div>
+
+    <div class="login-error" id="login-error"></div>
+
+    <div class="field">
+      <label>Email or username</label>
+      <input type="text" id="login-email" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <div class="password-row">
+        <input type="password" id="login-password" autocomplete="current-password" />
+        <button type="button" class="show-toggle" id="toggle-password" onclick="togglePasswordVisibility()">Show</button>
+      </div>
+    </div>
+    <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign in</button>
+
+    <button class="server-toggle" onclick="toggleServerField()">Change server address</button>
+    <div class="server-field" id="server-field">
+      <div class="field" style="margin-top:8px;">
+        <label>API base URL</label>
+        <input type="text" id="server-url" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DASHBOARD ============ -->
+<div id="dashboard">
+  <div class="top-row">
+    <span class="refresh-note" id="refresh-note">—</span>
+    <button class="logout-btn" onclick="logout()">Sign out</button>
+  </div>
+
+  <div class="masthead">
+    <div class="dateline" id="dateline"></div>
+    <h1>NewsCred — The Desk</h1>
+    <div class="kicker">Internal admin console · not part of the public app</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">Overview</button>
+    <button class="tab-btn" data-tab="users" onclick="switchTab('users')">Users</button>
+    <button class="tab-btn" data-tab="flagged" onclick="switchTab('flagged')">Flagged content</button>
+    <button class="tab-btn" data-tab="audit" onclick="switchTab('audit')">Audit log</button>
+  </div>
+
+  <!-- ===== Overview tab ===== -->
+  <div class="tab-panel active" id="tab-overview">
+    <div class="trust-section">
+      <div class="trust-label">Platform trust distribution — every check, every user</div>
+      <div class="trust-bar" id="trust-bar"></div>
+      <div class="trust-legend" id="trust-legend"></div>
+    </div>
+
+    <div class="stat-strip" id="stat-strip"></div>
+
+    <div class="panel" style="margin-bottom: 22px;">
+      <h2>Checks per day — last 7 days</h2>
+      <div class="trend-chart" id="trend-chart"></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <h2>Source leaderboard</h2>
+        <div id="leaderboard"></div>
+      </div>
+      <div class="panel">
+        <h2>System status</h2>
+        <div id="health"></div>
+      </div>
+    </div>
+
+    <div class="wire-section">
+      <h2>Recent activity</h2>
+      <div class="wire-grid">
+        <div class="wire-col">
+          <h3>New signups</h3>
+          <div id="wire-users"></div>
+        </div>
+        <div class="wire-col">
+          <h3>Latest checks</h3>
+          <div id="wire-articles"></div>
+        </div>
+        <div class="wire-col">
+          <h3>Payments</h3>
+          <div id="wire-payments"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Users tab ===== -->
+  <div class="tab-panel" id="tab-users">
+    <div class="panel">
+      <div class="toolbar">
+        <input type="text" class="search-input" id="user-search" placeholder="Search by name or email…" oninput="renderUserDirectory()" />
+        <button class="btn-outline" onclick="exportUsersCsv()">Export CSV</button>
+      </div>
+      <div id="user-directory"></div>
+    </div>
+  </div>
+
+  <!-- ===== Flagged content tab ===== -->
+  <div class="tab-panel" id="tab-flagged">
+    <div class="panel">
+      <div class="toolbar">
+        <div style="font-size:12.5px;color:var(--ink-muted);">Every check that scored below 40 — the false-claim cap in action</div>
+        <button class="btn-outline" onclick="exportFlaggedCsv()">Export CSV</button>
+      </div>
+      <div id="flagged-list"></div>
+    </div>
+  </div>
+
+  <!-- ===== Audit log tab ===== -->
+  <div class="tab-panel" id="tab-audit">
+    <div class="panel">
+      <h2>Admin actions</h2>
+      <div id="audit-list"></div>
+    </div>
+  </div>
+
+  <div class="footer-note">NewsCred Admin · built for the team behind the app</div>
+</div>
+
+<script>
+const DEFAULT_BASE = 'http://localhost:8080/api';
+let API_BASE = localStorage.getItem('admin_api_base') || DEFAULT_BASE;
+let TOKEN = localStorage.getItem('admin_token') || null;
+
+const VERDICT_META = {
+  CREDIBLE:        { label: 'Credible',        color: '#2F6D2F' },
+  LIKELY_CREDIBLE: { label: 'Likely credible',  color: '#7FA654' },
+  UNSURE:          { label: 'Unclear',          color: '#C99A3E' },
+  MISLEADING:      { label: 'Misleading',       color: '#C4703A' },
+  NOT_CREDIBLE:    { label: 'Not credible',     color: '#A32D2D' },
+};
+
+function togglePasswordVisibility() {
+  const input = document.getElementById('login-password');
+  const btn = document.getElementById('toggle-password');
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  btn.textContent = showing ? 'Show' : 'Hide';
+}
+
+function toggleServerField() {
+  const f = document.getElementById('server-field');
+  const input = document.getElementById('server-url');
+  if (f.style.display === 'block') { f.style.display = 'none'; }
+  else { f.style.display = 'block'; input.value = API_BASE; }
+}
+
+function scoreColor(score) {
+  if (score >= 65) return { fg: '#2F6D2F', bg: '#EAF3DE' };
+  if (score >= 45) return { fg: '#BA7517', bg: '#FAEEDA' };
+  return { fg: '#A32D2D', bg: '#FCEBEB' };
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errBox = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  const serverInput = document.getElementById('server-url');
+  if (serverInput && serverInput.value.trim()) {
+    API_BASE = serverInput.value.trim().replace(/\/$/, '');
+    localStorage.setItem('admin_api_base', API_BASE);
+  }
+  errBox.style.display = 'none';
+  if (!email || !password) {
+    errBox.textContent = 'Enter your email/username and password.';
+    errBox.style.display = 'block';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usernameOrEmail: email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Sign in failed.');
+    if (!data.admin) {
+      errBox.textContent = 'This account does not have admin access.';
+      errBox.style.display = 'block';
+      return;
+    }
+    TOKEN = data.token;
+    localStorage.setItem('admin_token', TOKEN);
+    showDashboard();
+  } catch (e) {
+    errBox.textContent = e.message || 'Cannot reach the server. Check the API address and try again.';
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign in';
+  }
+}
+
+function logout() {
+  TOKEN = null;
+  localStorage.removeItem('admin_token');
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+async function authFetch(path) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${TOKEN}` },
+  });
+  if (res.status === 401 || res.status === 403) {
+    throw new Error('FORBIDDEN');
+  }
+  return res.json();
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  } catch { return ''; }
+}
+
+async function loadDashboard() {
+  document.getElementById('dateline').textContent =
+    new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+
+  try {
+    const [overview, verdicts, sources, activity, health, trend, users, flagged, audit] = await Promise.all([
+      authFetch('/admin/overview'),
+      authFetch('/admin/verdicts'),
+      authFetch('/admin/sources?limit=8'),
+      authFetch('/admin/activity?limit=8'),
+      authFetch('/admin/health'),
+      authFetch('/admin/trend'),
+      authFetch('/admin/users'),
+      authFetch('/admin/flagged?limit=30'),
+      authFetch('/admin/audit-log?limit=30'),
+    ]);
+    renderTrustBar(verdicts);
+    renderStats(overview);
+    renderLeaderboard(sources);
+    renderHealth(health);
+    renderActivity(activity);
+    renderTrend(trend);
+    ALL_USERS = users;
+    renderUserDirectory();
+    renderFlagged(flagged);
+    renderAudit(audit);
+    document.getElementById('refresh-note').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  } catch (e) {
+    if (e.message === 'FORBIDDEN') {
+      logout();
+      const errBox = document.getElementById('login-error');
+      errBox.textContent = 'Session expired or access denied. Sign in again.';
+      errBox.style.display = 'block';
+    } else {
+      document.getElementById('refresh-note').textContent = 'Could not reach the server.';
+    }
+  }
+}
+
+function renderTrustBar(verdicts) {
+  const bar = document.getElementById('trust-bar');
+  const legend = document.getElementById('trust-legend');
+  bar.innerHTML = '';
+  legend.innerHTML = '';
+  const total = verdicts.reduce((s, v) => s + v.count, 0);
+
+  if (total === 0) {
+    bar.innerHTML = '<div style="width:100%;background:#EFEAE0;"></div>';
+    legend.innerHTML = '<span class="wire-empty">No checks recorded yet.</span>';
+    return;
+  }
+
+  verdicts.forEach(v => {
+    const meta = VERDICT_META[v.verdict] || { label: v.verdict, color: '#999' };
+    if (v.count > 0) {
+      const seg = document.createElement('div');
+      seg.className = 'trust-seg';
+      seg.style.width = v.percent + '%';
+      seg.style.background = meta.color;
+      seg.title = `${meta.label}: ${v.count} (${v.percent}%)`;
+      bar.appendChild(seg);
+    }
+    const item = document.createElement('div');
+    item.className = 'trust-legend-item';
+    item.innerHTML = `<span class="trust-dot" style="background:${meta.color}"></span>${meta.label} — ${v.count} (${v.percent}%)`;
+    legend.appendChild(item);
+  });
+}
+
+function renderStats(o) {
+  const strip = document.getElementById('stat-strip');
+  const items = [
+    { value: o.totalUsers, label: 'Users' },
+    { value: o.premiumUsers, label: 'Premium' },
+    { value: o.freeUsers, label: 'Free' },
+    { value: o.totalAnalyses, label: 'Checks run' },
+    { value: o.averageScore, label: 'Avg score' },
+    { value: 'GH₵' + o.revenueGhs, label: 'Revenue' },
+  ];
+  strip.innerHTML = items.map(i =>
+    `<div class="stat"><div class="stat-value">${i.value}</div><div class="stat-label">${i.label}</div></div>`
+  ).join('');
+}
+
+function renderLeaderboard(sources) {
+  const box = document.getElementById('leaderboard');
+  if (!sources.length) {
+    box.innerHTML = '<div class="empty">No sources checked yet.</div>';
+    return;
+  }
+  let rows = sources.map((s, i) => {
+    const c = scoreColor(s.averageScore);
+    return `<tr>
+      <td class="rank">${i + 1}</td>
+      <td>${escapeHtml(s.source)}</td>
+      <td>${s.checks}</td>
+      <td><span class="score-pill" style="color:${c.fg};background:${c.bg}">${s.averageScore}</span></td>
+    </tr>`;
+  }).join('');
+  box.innerHTML = `<table class="leaderboard">
+    <thead><tr><th></th><th>Source</th><th>Checks</th><th>Avg</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderHealth(h) {
+  const box = document.getElementById('health');
+  const rows = [
+    { label: 'Paystack payments', ok: h.paystack },
+    { label: 'Live fact-check verification', ok: h.googleFactCheck },
+    { label: 'Trending news feed', ok: h.gnews },
+    { label: 'Password reset email', ok: h.mail },
+  ];
+  box.innerHTML = rows.map(r => `
+    <div class="health-row">
+      <span><span class="health-dot" style="background:${r.ok ? '#2F6D2F' : '#A32D2D'}"></span>${r.label}</span>
+      <span style="color:${r.ok ? '#2F6D2F' : '#A32D2D'};font-weight:600;font-size:11.5px;">
+        ${r.ok ? 'Configured' : 'Not configured'}
+      </span>
+    </div>`).join('');
+}
+
+function renderActivity(a) {
+  const users = document.getElementById('wire-users');
+  const articles = document.getElementById('wire-articles');
+  const payments = document.getElementById('wire-payments');
+
+  users.innerHTML = a.users.length ? a.users.map(u => `
+    <div class="wire-item">
+      <span class="title">${escapeHtml(u.fullName || 'New user')} ${u.premium ? '· Premium' : ''}</span>
+      <span class="meta">${fmtDate(u.createdAt)}</span>
+    </div>`).join('') : '<div class="wire-empty">No signups yet.</div>';
+
+  articles.innerHTML = a.articles.length ? a.articles.map(x => {
+    const meta = VERDICT_META[x.verdict] || { label: x.verdict || 'Unrated', color: '#999' };
+    return `<div class="wire-item">
+      <span class="title">${escapeHtml((x.title || 'Untitled').slice(0, 44))}${(x.title || '').length > 44 ? '…' : ''}</span>
+      <span class="meta">${escapeHtml(x.source || 'Pasted text')} · <span style="color:${meta.color};font-weight:600;">${meta.label}</span> · ${fmtDate(x.createdAt)}</span>
+    </div>`;
+  }).join('') : '<div class="wire-empty">No checks yet.</div>';
+
+  payments.innerHTML = a.payments.length ? a.payments.map(p => `
+    <div class="wire-item">
+      <span class="title">GH₵ ${p.amountGhs.toFixed(2)}</span>
+      <span class="meta">${fmtDate(p.paidAt)}</span>
+    </div>`).join('') : '<div class="wire-empty">No payments yet.</div>';
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+let ALL_USERS = [];
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+}
+
+function renderTrend(days) {
+  const box = document.getElementById('trend-chart');
+  const max = Math.max(1, ...days.map(d => d.count));
+  box.innerHTML = days.map(d => {
+    const h = Math.max(3, Math.round((d.count / max) * 74));
+    const label = new Date(d.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' });
+    return `<div class="trend-bar-wrap">
+      <div class="trend-count">${d.count}</div>
+      <div class="trend-bar" style="height:${h}px"></div>
+      <div class="trend-day">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderUserDirectory() {
+  const box = document.getElementById('user-directory');
+  const q = (document.getElementById('user-search').value || '').toLowerCase();
+  const filtered = ALL_USERS.filter(u =>
+    (u.fullName || '').toLowerCase().includes(q) || (u.fullEmail || '').toLowerCase().includes(q)
+  );
+
+  if (!filtered.length) {
+    box.innerHTML = '<div class="empty">No users match your search.</div>';
+    return;
+  }
+
+  const rows = filtered.map(u => `
+    <tr data-user-id="${u.id}">
+      <td>${escapeHtml(u.fullName || 'Unnamed')}
+        ${u.isAdmin ? '<span class="badge badge-admin">Admin</span>' : ''}
+      </td>
+      <td class="email-cell">
+        <span class="email-display">${escapeHtml(u.maskedEmail)}</span>
+        <button class="link-btn" onclick="toggleEmail(this, '${escapeHtml(u.maskedEmail)}', '${escapeHtml(u.fullEmail)}')">Show full</button>
+      </td>
+      <td>${u.analysisCount}</td>
+      <td><span class="badge ${u.premium ? 'badge-premium' : 'badge-free'}">${u.premium ? 'Premium' : 'Free'}</span></td>
+      <td>
+        <button class="toggle-switch ${u.premium ? 'on' : ''}" onclick="togglePremium('${u.id}', ${!u.premium}, this)">
+          <span class="toggle-knob"></span>
+        </button>
+      </td>
+    </tr>`).join('');
+
+  box.innerHTML = `<table class="directory">
+    <thead><tr><th>Name</th><th>Email</th><th>Checks</th><th>Tier</th><th>Toggle</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function toggleEmail(btn, masked, full) {
+  const span = btn.previousElementSibling;
+  const showingFull = btn.textContent === 'Hide';
+  span.textContent = showingFull ? masked : full;
+  btn.textContent = showingFull ? 'Show full' : 'Hide';
+}
+
+async function togglePremium(userId, newValue, btnEl) {
+  btnEl.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/admin/users/${userId}/premium`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+      body: JSON.stringify({ premium: newValue }),
+    });
+    if (!res.ok) throw new Error();
+    const user = ALL_USERS.find(u => u.id === userId);
+    if (user) user.premium = newValue;
+    renderUserDirectory();
+  } catch {
+    alert('Could not update this user. Try again.');
+  } finally {
+    btnEl.disabled = false;
+  }
+}
+
+function renderFlagged(items) {
+  const box = document.getElementById('flagged-list');
+  if (!items.length) {
+    box.innerHTML = '<div class="empty">No checks have scored below 40 yet.</div>';
+    return;
+  }
+  box.innerHTML = items.map(f => {
+    const meta = VERDICT_META[f.verdict] || { label: f.verdict, color: '#999' };
+    return `<div class="flag-item">
+      <div class="flag-title">${escapeHtml(f.title || 'Untitled')}</div>
+      <div class="flag-meta">
+        <span class="flag-score">${Math.round(f.score)}</span>
+        ${escapeHtml(f.source || 'Pasted text')} · <span style="color:${meta.color};font-weight:600;">${meta.label}</span> · ${fmtDate(f.createdAt)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAudit(items) {
+  const box = document.getElementById('audit-list');
+  if (!items.length) {
+    box.innerHTML = '<div class="empty">No admin actions yet.</div>';
+    return;
+  }
+  box.innerHTML = items.map(a => `
+    <div class="wire-item">
+      <span class="title">${a.action.replace('_', ' ')} — ${escapeHtml(a.targetEmail || '')}</span>
+      <span class="meta">by ${escapeHtml(a.adminEmail)} · ${fmtDate(a.createdAt)}</span>
+    </div>`).join('');
+}
+
+function downloadCsv(filename, rows) {
+  const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportUsersCsv() {
+  const rows = [['Name', 'Email', 'Checks', 'Premium', 'Admin', 'Joined']];
+  ALL_USERS.forEach(u => rows.push([u.fullName, u.fullEmail, u.analysisCount, u.premium, u.isAdmin, u.createdAt]));
+  downloadCsv('newscred-users.csv', rows);
+}
+
+function exportFlaggedCsv() {
+  authFetch('/admin/flagged?limit=1000').then(items => {
+    const rows = [['Title', 'Source', 'Score', 'Verdict', 'URL', 'Date']];
+    items.forEach(f => rows.push([f.title, f.source, f.score, f.verdict, f.url, f.createdAt]));
+    downloadCsv('newscred-flagged.csv', rows);
+  });
+}
+
+function showDashboard() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  loadDashboard();
+  setInterval(loadDashboard, 60000);
+}
+
+// Auto sign-in if a token is already stored
+if (TOKEN) { showDashboard(); }
+
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+</script>
+</body>
+</html>

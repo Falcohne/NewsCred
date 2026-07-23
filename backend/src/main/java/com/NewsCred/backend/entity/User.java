@@ -37,6 +37,10 @@ public class User implements UserDetails {
     @Column(name = "email_verified")
     private boolean emailVerified = false;
 
+    /** Granted automatically at login if the email is in the admin allowlist. */
+    @Column(columnDefinition = "boolean not null default false")
+    private boolean isAdmin = false;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -70,6 +74,8 @@ public class User implements UserDetails {
     public void setUsername(String username) { this.username = username; }
 
     public boolean isPremium() { return premium; }
+    public boolean isAdmin() { return isAdmin; }
+    public void setAdmin(boolean admin) { this.isAdmin = admin; }
     public void setPremium(boolean premium) { this.premium = premium; }
 
     public int getAnalysisCount() { return analysisCount; }

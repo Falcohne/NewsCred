@@ -100,18 +100,16 @@ public class SecurityConfig {
                 "https://newscred.netlify.app"
             );
         } else {
-            allowedOrigins = Arrays.asList(
-                "http://localhost:8081",
-                "http://localhost:19006",
-                "http://localhost:19000",
-                "http://localhost:3000",
-                "http://10.0.2.2:8081",
-                "http://10.0.2.2:19006",
-                "http://192.168.1.100:8081",
-                "http://192.168.1.100:19006"
-            );
+            allowedOrigins = null; // dev mode uses patterns below instead
         }
-        configuration.setAllowedOrigins(allowedOrigins);
+
+        if (isProduction) {
+            configuration.setAllowedOrigins(allowedOrigins);
+        } else {
+            // Dev mode: accept any origin, including "null" (sent by browsers
+            // when a local admin-dashboard HTML file is opened via file://).
+            configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        }
 
         configuration.setAllowedMethods(Arrays.asList(
             "GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"
