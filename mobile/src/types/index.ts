@@ -1,3 +1,5 @@
+//Reviewed by Agyemang-99
+//Verified types for mobile services
 /**
  * NewsCred TypeScript Interfaces
  * Central location for all type definitions
