@@ -5,11 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1a2332"
+      "resizeMode": "cover",
+      "backgroundColor": "#FAF7F0"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -23,8 +23,8 @@
     "android": {
       "package": "com.newscred.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#1a2332"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FAF7F0"
       }
     },
     "web": {
