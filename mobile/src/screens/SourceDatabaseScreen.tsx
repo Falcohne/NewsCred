@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   RefreshControl,
   Platform,
   StatusBar,
 } from 'react-native';
+import {SafeAreaView} from "react-native-safe-area-context"
 import { useTheme } from '../context/ThemeContext';
 import {
   Card,
