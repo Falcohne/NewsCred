@@ -1,5 +1,3 @@
-//Reviewed by Agyemang-99
-//Verified types for mobile services
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
