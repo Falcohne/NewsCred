@@ -25,7 +25,6 @@ interface ArticleWebViewScreenProps {
 /**
  * Screen to display the full article content in an in-app WebView
  * Users can read the original article without leaving the app
- * Supports dark/light mode and includes navigation controls
  */
 const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) => {
   const { darkMode } = useTheme();
