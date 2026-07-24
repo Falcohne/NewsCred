@@ -8,6 +8,11 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import AnalysisDetailScreen from '../screens/AnalysisDetailScreen';
 import ArticleWebViewScreen from '../screens/ArticleWebViewScreen';
+import PaymentScreen from '../screens/PaymentScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import SourceDatabaseScreen from '../screens/SourceDatabaseScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
+import HowWeScoreScreen from '../screens/HowWeScoreScreen'; // 👈 ADD THIS IMPORT
 import BottomTabNavigator from './BottomTabNavigator';
 
 const Stack = createStackNavigator();
@@ -19,20 +24,20 @@ const AppNavigator = () => {
   const { darkMode, colors } = useTheme();
 
   const headerStyle = {
-    backgroundColor: darkMode ? '#16213E' : '#FFFFFF',
+    backgroundColor: colors.paper,
     elevation: 0,
     shadowOpacity: 0,
     borderBottomWidth: 1,
-    borderBottomColor: darkMode ? '#333333' : '#EEEEEE',
+    borderBottomColor: colors.line,
   };
 
   const headerTitleStyle = {
     fontWeight: '600' as const,
-    color: darkMode ? '#FFFFFF' : '#1A2332',
+    color: colors.ink,
     fontSize: 18,
   };
 
-  const headerTintColor = darkMode ? '#BB86FC' : '#6200EE';
+  const headerTintColor = colors.teal;
 
   return (
     <NavigationContainer>
@@ -40,7 +45,6 @@ const AppNavigator = () => {
         initialRouteName="Login"
         screenOptions={{
           headerShown: false,
-          animationEnabled: true,
         }}
       >
         {/* Authentication Screens */}
@@ -55,8 +59,39 @@ const AppNavigator = () => {
           name="Register" 
           component={RegisterScreen} 
         />
+        <Stack.Screen
+          name="ForgotPassword"
+          component={ForgotPasswordScreen}
+        />
+        <Stack.Screen
+          name="SourceDatabase"
+          component={SourceDatabaseScreen}
+          options={{
+            headerShown: true,
+            headerTitle: 'Your sources',
+            headerStyle: headerStyle,
+            headerTitleStyle: headerTitleStyle,
+            headerTintColor: headerTintColor,
+          }}
+        />
         
         {/* Main Application */}
+        <Stack.Screen
+          name="Onboarding"
+          component={OnboardingScreen}
+          options={{ gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="HowWeScore"
+          component={HowWeScoreScreen}
+          options={{
+            headerShown: true,
+            headerTitle: 'How we score',
+            headerStyle: headerStyle,
+            headerTitleStyle: headerTitleStyle,
+            headerTintColor: headerTintColor,
+          }}
+        />
         <Stack.Screen 
           name="MainTabs" 
           component={BottomTabNavigator} 
@@ -71,7 +106,7 @@ const AppNavigator = () => {
           component={AnalysisDetailScreen}
           options={({ navigation }) => ({
             headerShown: true,
-            headerTitle: 'Analysis Report',
+            headerTitle: 'Credibility report',
             headerBackTitle: 'Back',
             headerStyle: headerStyle,
             headerTitleStyle: headerTitleStyle,
@@ -96,6 +131,38 @@ const AppNavigator = () => {
           options={{
             headerShown: false,
           }}
+        />
+
+        {/* 👇 ADD THIS: Payment Screen */}
+        <Stack.Screen
+          name="Payment"
+          component={PaymentScreen}
+          options={({ navigation }) => ({
+            headerShown: true,
+            headerTitle: 'Upgrade to Premium',
+            headerBackTitle: 'Back',
+            headerStyle: {
+              backgroundColor: darkMode ? '#1A2332' : '#4CAF50',
+              elevation: 0,
+              shadowOpacity: 0,
+            },
+            headerTitleStyle: {
+              fontWeight: '600' as const,
+              color: '#FFFFFF',
+              fontSize: 18,
+            },
+            headerTintColor: '#FFFFFF',
+            headerLeft: () => (
+              <IconButton
+                icon="arrow-left"
+                size={24}
+                onPress={() => navigation.goBack()}
+                iconColor="#FFFFFF"
+                style={{ marginLeft: 4 }}
+              />
+            ),
+            headerRight: () => null,
+          })}
         />
       </Stack.Navigator>
     </NavigationContainer>

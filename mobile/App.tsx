@@ -1,3 +1,4 @@
+import { registerRootComponent } from 'expo';
 import React from 'react';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -16,7 +17,7 @@ const AppWrapper = () => {
     <>
       <StatusBar 
         style={darkMode ? 'light' : 'dark'} 
-        backgroundColor={darkMode ? '#0A0A1A' : '#F5F7FA'}
+        backgroundColor={darkMode ? '#10141C' : '#FAF7F0'}
         translucent={false}
       />
       <PaperProvider theme={paperTheme}>
@@ -32,10 +33,12 @@ const AppWrapper = () => {
  * Main application entry point
  * Wraps the app with ThemeProvider for dark/light mode support
  */
-export default function App() {
+const App = () => {
   return (
     <ThemeProvider>
       <AppWrapper />
     </ThemeProvider>
   );
-}
+};
+
+export default registerRootComponent(App);

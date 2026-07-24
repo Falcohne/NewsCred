@@ -1,14 +1,35 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DefaultTheme } from 'react-native-paper';
+import { DefaultTheme, MD3DarkTheme } from 'react-native-paper';
 
-interface ThemeColors {
+/**
+ * NewsCred design system — "an editorial trust layer for everyday reading".
+ * Editorial paper surfaces, ink text, ONE teal accent.
+ * Verdict colors (green→amber→red) are the only loud colors.
+ */
+
+export interface ThemeColors {
+  // New design tokens
+  paper: string;        // page background
+  card: string;         // raised surface
+  line: string;         // hairline borders
+  ink: string;          // primary text
+  inkMuted: string;     // secondary text
+  hint: string;         // placeholders
+  teal: string;         // the one accent
+  tealSoft: string;     // accent tint background
+  onTeal: string;       // text on teal
+  // Verdict scale
+  good: string; goodBg: string;
+  fair: string; fairBg: string;
+  warn: string; warnBg: string;
+  bad: string;  badBg: string;
+  // Legacy keys (older screens still reference these)
   background: string;
   backgroundSecondary: string;
   text: string;
   textSecondary: string;
   border: string;
-  card: string;
   cardDark: string;
   header: string;
   headerDark: string;
@@ -19,6 +40,85 @@ interface ThemeColors {
   accent: string;
 }
 
+const lightColors: ThemeColors = {
+  paper: '#FAF7F0',
+  card: '#FFFFFF',
+  line: '#E5E0D4',
+  ink: '#1A1A16',
+  inkMuted: '#6B6858',
+  hint: '#A19D8E',
+  teal: '#0F6E56',
+  tealSoft: '#E1F5EE',
+  onTeal: '#FFFFFF',
+  good: '#3B6D11', goodBg: '#EAF3DE',
+  fair: '#639922', fairBg: '#EAF3DE',
+  warn: '#BA7517', warnBg: '#FAEEDA',
+  bad: '#A32D2D',  badBg: '#FCEBEB',
+  background: '#FAF7F0',
+  backgroundSecondary: '#FFFFFF',
+  text: '#1A1A16',
+  textSecondary: '#6B6858',
+  border: '#E5E0D4',
+  cardDark: '#F4F0E7',
+  header: '#FAF7F0',
+  headerDark: '#10141C',
+  input: '#FFFFFF',
+  inputDark: '#1A2029',
+  shadow: '#000000',
+  primary: '#0F6E56',
+  accent: '#0F6E56',
+};
+
+const darkColors: ThemeColors = {
+  paper: '#10141C',
+  card: '#1A2029',
+  line: '#2A313C',
+  ink: '#F2EFE7',
+  inkMuted: '#9AA0A8',
+  hint: '#6C737C',
+  teal: '#4CC39A',
+  tealSoft: '#14332A',
+  onTeal: '#04342C',
+  good: '#97C459', goodBg: '#22380F',
+  fair: '#97C459', fairBg: '#22380F',
+  warn: '#EF9F27', warnBg: '#3A2A0A',
+  bad: '#F09595',  badBg: '#3A1414',
+  background: '#10141C',
+  backgroundSecondary: '#1A2029',
+  text: '#F2EFE7',
+  textSecondary: '#9AA0A8',
+  border: '#2A313C',
+  cardDark: '#151A22',
+  header: '#10141C',
+  headerDark: '#10141C',
+  input: '#1A2029',
+  inputDark: '#10141C',
+  shadow: '#000000',
+  primary: '#4CC39A',
+  accent: '#4CC39A',
+};
+
+/** Serif display face for headings — the editorial voice. */
+export const displayFont = { fontFamily: 'serif' as const };
+
+/** Map a 0–100 score to verdict colors. */
+export const scoreColors = (score: number, c: ThemeColors) => {
+  if (score >= 65) return { fg: c.good, bg: c.goodBg };
+  if (score >= 45) return { fg: c.warn, bg: c.warnBg };
+  return { fg: c.bad, bg: c.badBg };
+};
+
+export const verdictLabel = (verdict?: string) => {
+  switch (verdict) {
+    case 'CREDIBLE': return 'Credible';
+    case 'LIKELY_CREDIBLE': return 'Likely credible';
+    case 'UNSURE': return 'Unclear';
+    case 'MISLEADING': return 'Misleading';
+    case 'NOT_CREDIBLE': return 'Not credible';
+    default: return 'Unrated';
+  }
+};
+
 interface ThemeContextType {
   darkMode: boolean;
   toggleDarkMode: () => void;
@@ -27,142 +127,51 @@ interface ThemeContextType {
   paperTheme: any;
 }
 
-const lightColors: ThemeColors = {
-  background: '#F5F7FA',
-  backgroundSecondary: '#FFFFFF',
-  text: '#1A2332',
-  textSecondary: '#7F8C8D',
-  border: '#E8ECF1',
-  card: '#FFFFFF',
-  cardDark: '#F8F9FA',
-  header: '#FFFFFF',
-  headerDark: '#16213E',
-  input: '#FFFFFF',
-  inputDark: '#1A1A2E',
-  shadow: '#000000',
-  primary: '#6200EE',
-  accent: '#7C4DFF',
-};
-
-const darkColors: ThemeColors = {
-  background: '#0A0A1A',
-  backgroundSecondary: '#1A1A2E',
-  text: '#FFFFFF',
-  textSecondary: '#A0AEC0',
-  border: '#333333',
-  card: '#16213E',
-  cardDark: '#1A1A2E',
-  header: '#0D1117',
-  headerDark: '#0A0A1A',
-  input: '#1A1A2E',
-  inputDark: '#0A0A1A',
-  shadow: '#000000',
-  primary: '#BB86FC',
-  accent: '#7C4DFF',
-};
-
-const lightPaperTheme = {
-  ...DefaultTheme,
+const buildPaperTheme = (dark: boolean, c: ThemeColors) => ({
+  ...(dark ? MD3DarkTheme : DefaultTheme),
   colors: {
-    ...DefaultTheme.colors,
-    primary: '#6200EE',
-    accent: '#7C4DFF',
-    background: '#F5F7FA',
-    surface: '#FFFFFF',
-    text: '#1A2332',
-    disabled: '#9E9E9E',
-    placeholder: '#9E9E9E',
-    backdrop: 'rgba(0, 0, 0, 0.5)',
-    notification: '#F44336',
+    ...(dark ? MD3DarkTheme.colors : DefaultTheme.colors),
+    primary: c.teal,
+    accent: c.teal,
+    background: c.paper,
+    surface: c.card,
+    text: c.ink,
+    placeholder: c.hint,
+    backdrop: 'rgba(0,0,0,0.5)',
+    notification: c.bad,
   },
-};
-
-const darkPaperTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    primary: '#BB86FC',
-    accent: '#7C4DFF',
-    background: '#0A0A1A',
-    surface: '#16213E',
-    text: '#FFFFFF',
-    disabled: '#666666',
-    placeholder: '#666666',
-    backdrop: 'rgba(0, 0, 0, 0.7)',
-    notification: '#EF5350',
-  },
-};
-
-const ThemeContext = createContext<ThemeContextType>({
-  darkMode: false,
-  toggleDarkMode: () => {},
-  setDarkMode: () => {},
-  colors: lightColors,
-  paperTheme: lightPaperTheme,
 });
 
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  return context;
-};
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [darkMode, setDarkMode] = useState(false);
-  const [colors, setColors] = useState<ThemeColors>(lightColors);
-  const [paperTheme, setPaperTheme] = useState(lightPaperTheme);
-  const [isLoading, setIsLoading] = useState(true);
+  const [darkMode, setDarkModeState] = useState(false); // light "paper" is the default
 
   useEffect(() => {
-    loadTheme();
+    AsyncStorage.getItem('darkMode').then((v) => {
+      if (v !== null) setDarkModeState(v === 'true');
+    });
   }, []);
 
-  const loadTheme = async () => {
-    try {
-      const dark = await AsyncStorage.getItem('darkMode');
-      const isDark = dark === 'true';
-      setDarkMode(isDark);
-      setColors(isDark ? darkColors : lightColors);
-      setPaperTheme(isDark ? darkPaperTheme : lightPaperTheme);
-    } catch (error) {
-      console.log('Error loading theme:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const setDarkMode = (value: boolean) => {
+    setDarkModeState(value);
+    AsyncStorage.setItem('darkMode', String(value)).catch(() => {});
   };
 
-  const toggleDarkMode = () => {
-    const newValue = !darkMode;
-    setDarkMode(newValue);
-    setColors(newValue ? darkColors : lightColors);
-    setPaperTheme(newValue ? darkPaperTheme : lightPaperTheme);
-    AsyncStorage.setItem('darkMode', String(newValue));
-  };
-
-  const setDarkModeValue = (value: boolean) => {
-    setDarkMode(value);
-    setColors(value ? darkColors : lightColors);
-    setPaperTheme(value ? darkPaperTheme : lightPaperTheme);
-    AsyncStorage.setItem('darkMode', String(value));
-  };
-
-  // Return loading state if still loading
-  if (isLoading) {
-    return null;
-  }
+  const toggleDarkMode = () => setDarkMode(!darkMode);
+  const colors = darkMode ? darkColors : lightColors;
 
   return (
     <ThemeContext.Provider
-      value={{
-        darkMode,
-        toggleDarkMode,
-        setDarkMode: setDarkModeValue,
-        colors,
-        paperTheme,
-      }}
+      value={{ darkMode, toggleDarkMode, setDarkMode, colors, paperTheme: buildPaperTheme(darkMode, colors) }}
     >
       {children}
     </ThemeContext.Provider>
   );
 };
 
-export default ThemeContext;
+export const useTheme = () => {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error('useTheme must be used within ThemeProvider');
+  return ctx;
+};

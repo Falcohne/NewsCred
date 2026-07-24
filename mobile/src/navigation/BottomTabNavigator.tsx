@@ -1,32 +1,75 @@
-import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { Badge } from 'react-native-paper';
+import React, { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/native';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import StatisticsScreen from '../screens/StatisticsScreen';
 import SavedArticlesScreen from '../screens/SavedArticlesScreen';
-import SourceDatabaseScreen from '../screens/SourceDatabaseScreen';
+import NewsScreen from '../screens/NewsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
+
+const useNewsBadge = () => {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem('newsTabVisited').then((v) => setShow(v !== 'true'));
+  }, []);
+  const clear = () => {
+    setShow(false);
+    AsyncStorage.setItem('newsTabVisited', 'true');
+  };
+  return { show, clear };
+};
 
 /**
  * Bottom tab navigator with five main sections
  * Uses Expo Vector Icons for clean, professional icons
  * Integrated with Paper theme for consistent styling
  */
+/** Small "new feature" dot on the News tab, cleared once visited. */
+const NewsNewDot = () => {
+  const [seen, setSeen] = useState(true);
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+    AsyncStorage.getItem('newsTabSeen').then((v) => setSeen(v === 'true'));
+  }, []);
+
+  useEffect(() => {
+    if (isFocused) {
+      AsyncStorage.setItem('newsTabSeen', 'true');
+      setSeen(true);
+    }
+  }, [isFocused]);
+
+  if (seen) return null;
+  return (
+    <View
+      style={{
+        position: 'absolute', top: -2, right: -6,
+        width: 8, height: 8, borderRadius: 4, backgroundColor: '#0F6E56',
+      }}
+    />
+  );
+};
+
 const BottomTabNavigator = () => {
   const { darkMode, colors } = useTheme();
 
   const themeColors = {
-    background: darkMode ? '#0A0A1A' : '#F5F7FA',
-    card: darkMode ? '#16213E' : '#FFFFFF',
-    tint: '#6200EE',
+    background: colors.paper,
+    card: colors.card,
+    tint: colors.teal,
     inactiveTint: darkMode ? '#666666' : '#999999',
   };
+
+  const newsBadge = useNewsBadge();
 
   return (
     <Tab.Navigator
@@ -34,7 +77,7 @@ const BottomTabNavigator = () => {
         headerShown: false,
         tabBarStyle: {
           backgroundColor: themeColors.card,
-          borderTopColor: darkMode ? '#333333' : '#EEEEEE',
+          borderTopColor: colors.line,
           borderTopWidth: 1,
           height: Platform.OS === 'ios' ? 85 : 65,
           paddingBottom: Platform.OS === 'ios' ? 25 : 10,
@@ -68,8 +111,9 @@ const BottomTabNavigator = () => {
             case 'History':
               iconName = focused ? 'document-text' : 'document-text-outline';
               break;
-            case 'Sources':
-              iconName = focused ? 'book' : 'book-outline';
+            case 'News':
+              iconName = focused ? 'newspaper' : 'newspaper-outline';
+              if (newsBadge.show) badgeCount = 1;
               break;
             case 'Profile':
               iconName = focused ? 'person' : 'person-outline';
@@ -89,6 +133,7 @@ const BottomTabNavigator = () => {
                   {badgeCount}
                 </Badge>
               )}
+              {route.name === 'News' && <NewsNewDot />}
             </>
           );
         },
@@ -119,11 +164,14 @@ const BottomTabNavigator = () => {
         }}
       />
       <Tab.Screen 
-        name="Sources" 
-        component={SourceDatabaseScreen} 
+        name="News" 
+        component={NewsScreen} 
         options={{ 
-          tabBarLabel: 'Sources',
-          tabBarAccessibilityLabel: 'Sources',
+          tabBarLabel: 'News',
+          tabBarAccessibilityLabel: 'News',
+        }}
+        listeners={{
+          tabPress: () => newsBadge.clear(),
         }}
       />
       <Tab.Screen 

@@ -1,211 +1,93 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-} from 'react-native';
-import { useTheme } from '../context/ThemeContext';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Pressable } from 'react-native';
+import { useTheme, displayFont } from '../context/ThemeContext';
 
-const { width } = Dimensions.get('window');
+interface AlertButton {
+  text: string;
+  onPress?: () => void;
+  style?: 'default' | 'cancel' | 'destructive';
+}
 
 interface CustomAlertProps {
   visible: boolean;
   title: string;
   message: string;
-  buttons?: Array<{
-    text: string;
-    onPress?: () => void;
-    style?: 'default' | 'cancel';
-  }>;
+  buttons?: AlertButton[];
   onClose: () => void;
 }
 
 /**
- * Custom alert component with dark mode support
- * Replaces the default React Native Alert
+ * App-wide alert, styled to the design system:
+ * cancel = quiet outline · default = teal · destructive = red.
  */
-const CustomAlert: React.FC<CustomAlertProps> = ({
-  visible,
-  title,
-  message,
-  buttons,
-  onClose,
-}) => {
-  const { darkMode } = useTheme();
+const CustomAlert: React.FC<CustomAlertProps> = ({ visible, title, message, buttons, onClose }) => {
+  const { colors } = useTheme();
+  const s = styles(colors);
+  const btns = buttons && buttons.length ? buttons : [{ text: 'OK' }];
 
-  const handleButtonPress = (onPress?: () => void) => {
+  const press = (b: AlertButton) => {
     onClose();
-    if (onPress) {
-      setTimeout(onPress, 300);
-    }
+    if (b.onPress) setTimeout(b.onPress, 120);
   };
 
   return (
-    <Modal
-      transparent
-      visible={visible}
-      animationType="fade"
-    >
-      <View style={styles.overlay}>
-        <View style={[
-          styles.alertContainer,
-          darkMode && styles.alertContainerDark
-        ]}>
-          <Text style={[
-            styles.title,
-            darkMode && styles.titleDark
-          ]}>
-            {title}
-          </Text>
-          <Text style={[
-            styles.message,
-            darkMode && styles.messageDark
-          ]}>
-            {message}
-          </Text>
-          <View style={styles.buttonContainer}>
-            {buttons && buttons.map((button, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.buttonWrapper,
-                  button.style === 'cancel' && styles.cancelButtonWrapper,
-                ]}
-                onPress={() => handleButtonPress(button.onPress)}
-                activeOpacity={0.7}
-              >
-                <View style={[
-                  styles.button,
-                  button.style === 'cancel' && styles.cancelButton,
-                  darkMode && styles.buttonDark,
-                  button.style === 'cancel' && darkMode && styles.cancelButtonDark,
-                ]}>
-                  <Text
-                    style={[
-                      styles.buttonText,
-                      button.style === 'cancel' && styles.cancelButtonText,
-                      darkMode && styles.buttonTextDark,
-                    ]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.8}
-                  >
-                    {button.text}
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={s.backdrop} onPress={onClose}>
+        <Pressable style={s.card} onPress={() => {}}>
+          <Text style={s.title}>{title}</Text>
+          {!!message && <Text style={s.message}>{message}</Text>}
+          <View style={[s.btnRow, btns.length > 2 && { flexDirection: 'column' }]}>
+            {btns.map((b, i) => {
+              const isCancel = b.style === 'cancel';
+              const isDestructive = b.style === 'destructive';
+              return (
+                <TouchableOpacity
+                  key={i}
+                  activeOpacity={0.85}
+                  onPress={() => press(b)}
+                  style={[
+                    s.btn,
+                    btns.length > 2 && { marginHorizontal: 0, marginTop: i === 0 ? 0 : 8 },
+                    isCancel && s.btnCancel,
+                    isDestructive && { backgroundColor: colors.bad },
+                    !isCancel && !isDestructive && { backgroundColor: colors.teal },
+                  ]}
+                >
+                  <Text style={[
+                    s.btnText,
+                    isCancel ? { color: colors.inkMuted } : { color: isDestructive ? '#FFFFFF' : colors.onTeal },
+                  ]}>
+                    {b.text}
                   </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-            {!buttons && (
-              <TouchableOpacity
-                style={styles.buttonWrapper}
-                onPress={() => handleButtonPress()}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.button, darkMode && styles.buttonDark]}>
-                  <Text style={[styles.buttonText, darkMode && styles.buttonTextDark]}>OK</Text>
-                </View>
-              </TouchableOpacity>
-            )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+const styles = (c: any) => StyleSheet.create({
+  backdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center', justifyContent: 'center', padding: 28,
   },
-  alertContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    width: width * 0.85,
-    maxWidth: 340,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+  card: {
+    width: '100%', maxWidth: 360,
+    backgroundColor: c.card, borderWidth: 1, borderColor: c.line,
+    borderRadius: 20, padding: 22,
   },
-  alertContainerDark: {
-    backgroundColor: '#16213E',
-    shadowColor: '#000000',
+  title: { ...displayFont, fontSize: 18, color: c.ink, textAlign: 'center', marginBottom: 8 },
+  message: { fontSize: 13.5, color: c.inkMuted, textAlign: 'center', lineHeight: 20, marginBottom: 18 },
+  btnRow: { flexDirection: 'row', justifyContent: 'center' },
+  btn: {
+    flex: 1, borderRadius: 24, paddingVertical: 11,
+    alignItems: 'center', marginHorizontal: 5,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A2332',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  titleDark: {
-    color: '#FFFFFF',
-  },
-  message: {
-    fontSize: 15,
-    color: '#4A5568',
-    marginBottom: 20,
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 4,
-  },
-  messageDark: {
-    color: '#A0AEC0',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  buttonWrapper: {
-    flex: 1,
-    minWidth: 80,
-    maxWidth: 140,
-  },
-  cancelButtonWrapper: {
-    flex: 1,
-    minWidth: 80,
-    maxWidth: 140,
-  },
-  button: {
-    backgroundColor: '#6200EE',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    width: '100%',
-  },
-  buttonDark: {
-    backgroundColor: '#7C4DFF',
-  },
-  cancelButton: {
-    backgroundColor: '#EF5350',
-  },
-  cancelButtonDark: {
-    backgroundColor: '#D32F2F',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  buttonTextDark: {
-    color: '#FFFFFF',
-  },
-  cancelButtonText: {
-    color: '#FFFFFF',
-  },
+  btnCancel: { backgroundColor: 'transparent', borderWidth: 1, borderColor: c.line },
+  btnText: { fontSize: 14, fontWeight: '700' },
 });
 
 export default CustomAlert;
