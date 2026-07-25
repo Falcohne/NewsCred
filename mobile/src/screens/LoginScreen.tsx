@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
 import CustomAlert from '../components/CustomAlert';
 import { useTheme, displayFont } from '../context/ThemeContext';
+import { API_BASE_URL } from '../services/api';
 
 /** Persist the full session (including the refresh token). */
 export const storeSession = async (d: any) => {
@@ -62,6 +63,7 @@ const LoginScreen = ({ navigation }: any) => {
         <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
           <Text style={s.brand}>NewsCred</Text>
           <Text style={s.tagline}>Read smarter. Share safer.</Text>
+          <Text style={{ fontSize: 10, color: 'red', textAlign: 'center', marginBottom: 8 }}>DEBUG: {API_BASE_URL}</Text>
 
           <View style={s.card}>
             <Text style={s.heading}>Sign in</Text>
