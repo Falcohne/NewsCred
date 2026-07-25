@@ -4,8 +4,20 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 const getApiBaseUrl = (): string => {
+  // Baked in at build time via EXPO_PUBLIC_API_URL (see .env).
+  // This is what makes a standalone APK work without Expo Go's
+  // dev-server auto-detection, which does not exist in a real build.
+  const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
   if (!__DEV__) {
-    return 'https://api.newscred.com/api';
+    // No env var set and this is a production/standalone build -
+    // nothing we can auto-detect. Fail loudly rather than silently
+    // hitting a domain that doesn't exist.
+    console.warn('EXPO_PUBLIC_API_URL is not set - the app cannot reach a backend.');
+    return 'http://localhost:8080/api';
   }
 
   // Works across Expo SDK versions: find the Metro host (your PC's LAN IP)
