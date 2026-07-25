@@ -1,246 +1,151 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
+  View, Text, StyleSheet, TextInput, TouchableOpacity,
+  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
-import {
-  TextInput as PaperInput,
-  Button,
-  ActivityIndicator,
-  Surface,
-} from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
 import CustomAlert from '../components/CustomAlert';
+import { useTheme, displayFont } from '../context/ThemeContext';
+
+/** Persist the full session (including the refresh token). */
+export const storeSession = async (d: any) => {
+  const pairs: [string, string][] = [
+    ['token', d.token || ''],
+    ['refreshToken', d.refreshToken || ''],
+    ['userId', d.userId || ''],
+    ['userName', d.fullName || ''],
+    ['userEmail', d.email || ''],
+    ['isPremium', String(!!d.premium)],
+    ['analysisCount', String(d.analysisCount ?? 0)],
+  ];
+  await AsyncStorage.multiSet(pairs);
+};
 
 const LoginScreen = ({ navigation }: any) => {
-  const { darkMode } = useTheme();
+  const { colors } = useTheme();
+  const s = styles(colors);
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [secureTextEntry, setSecureTextEntry] = useState(true);
-  
-  const [alertVisible, setAlertVisible] = useState(false);
-  const [alertTitle, setAlertTitle] = useState('');
-  const [alertMessage, setAlertMessage] = useState('');
-  const [alertButtons, setAlertButtons] = useState<any[]>([]);
+  const [alert, setAlert] = useState<{ title: string; message: string; buttons?: any[] } | null>(null);
 
-  const showAlert = (title: string, message: string, buttons?: any[]) => {
-    setAlertTitle(title);
-    setAlertMessage(message);
-    setAlertButtons(buttons || [{ text: 'OK' }]);
-    setAlertVisible(true);
-  };
-
-  const handleLogin = async () => {
-    if (!email || !password) {
-      showAlert('Error', 'Please fill in all fields');
+  const login = async () => {
+    if (!identifier.trim() || !password) {
+      setAlert({ title: 'Missing details', message: 'Enter your email or username and your password.' });
       return;
     }
-
     setLoading(true);
     try {
-      const response = await api.post('/auth/login', { email, password });
-      const { token, userId, fullName } = response.data;
-
-      await AsyncStorage.setItem('token', token);
-      await AsyncStorage.setItem('userId', userId);
-      await AsyncStorage.setItem('userName', fullName);
-
-      showAlert('Success', 'Logged in successfully!');
-      setTimeout(() => {
-        navigation.replace('MainTabs');
-      }, 500);
+      const res = await api.post('/auth/login', {
+        usernameOrEmail: identifier.trim(),
+        password,
+      });
+      await storeSession(res.data);
+      const seen = await AsyncStorage.getItem('hasSeenOnboarding');
+      navigation.replace(seen === 'true' ? 'MainTabs' : 'Onboarding');
     } catch (error: any) {
-      console.log('Login error:', error);
-      
-      let errorMessage = 'Something went wrong. Please try again.';
-      
-      if (error.response) {
-        if (error.response.data) {
-          if (typeof error.response.data === 'string') {
-            errorMessage = error.response.data;
-          } else if (error.response.data.message) {
-            errorMessage = error.response.data.message;
-          }
-        }
-        
-        if (error.response.status === 401) {
-          errorMessage = 'Invalid email or password. Please try again.';
-        } else if (error.response.status === 400) {
-          if (errorMessage.includes('User not found')) {
-            showAlert(
-              'Account Not Found',
-              'The email address you entered is not registered.\n\nWould you like to create an account?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Register', onPress: () => navigation.navigate('Register') },
-              ]
-            );
-            setLoading(false);
-            return;
-          }
-        }
-      } else if (error.request) {
-        errorMessage = 'Cannot connect to the server.\n\nPlease make sure the backend is running.';
-      }
-      
-      showAlert('Login Failed', errorMessage);
+      const msg = error.response?.data?.message
+        || (error.response ? 'Email/username or password is incorrect.' : 'Cannot reach the server. Check your connection.');
+      setAlert({ title: 'Sign in failed', message: msg });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, darkMode && styles.containerDark]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.innerContainer}>
-        <Surface style={[styles.surface, darkMode && styles.surfaceDark]} elevation={4}>
-          <View style={styles.headerContainer}>
-            <Text style={[styles.logoText, darkMode && styles.textDark]}>NewsCred</Text>
-            <Text style={[styles.subtitle, darkMode && styles.textMuted]}>
-              Intelligent News Credibility Assessment
-            </Text>
+    <SafeAreaView style={s.container}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+          <Text style={s.brand}>NewsCred</Text>
+          <Text style={s.tagline}>Read smarter. Share safer.</Text>
+
+          <View style={s.card}>
+            <Text style={s.heading}>Sign in</Text>
+
+            <Text style={s.label}>Email or username</Text>
+            <TextInput
+              style={s.input}
+              placeholder="name@example.com"
+              placeholderTextColor={colors.hint}
+              value={identifier}
+              onChangeText={setIdentifier}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+            />
+
+            <Text style={s.label}>Password</Text>
+            <View style={s.passwordRow}>
+              <TextInput
+                style={[s.input, { flex: 1, marginBottom: 0, borderWidth: 0 }]}
+                placeholder="Your password"
+                placeholderTextColor={colors.hint}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ paddingHorizontal: 12 }}>
+                <Text style={{ color: colors.teal, fontSize: 12, fontWeight: '600' }}>
+                  {showPassword ? 'Hide' : 'Show'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={s.primaryBtn} onPress={login} disabled={loading} activeOpacity={0.85}>
+              {loading ? <ActivityIndicator color={colors.onTeal} /> : <Text style={s.primaryBtnText}>Sign in</Text>}
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={{ marginTop: 14, alignItems: 'center' }}>
+              <Text style={{ color: colors.teal, fontSize: 13, fontWeight: '600' }}>Forgot password?</Text>
+            </TouchableOpacity>
           </View>
 
-          <PaperInput
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            mode="outlined"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            left={<PaperInput.Icon icon="email" />}
-            style={[styles.input, darkMode && styles.inputDark]}
-            textColor={darkMode ? '#FFFFFF' : '#1A2332'}
-            activeOutlineColor="#6200EE"
-          />
+          <View style={s.footerRow}>
+            <Text style={{ color: colors.inkMuted, fontSize: 13 }}>New to NewsCred? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <Text style={{ color: colors.teal, fontSize: 13, fontWeight: '700' }}>Create an account</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-          <PaperInput
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            mode="outlined"
-            secureTextEntry={secureTextEntry}
-            left={<PaperInput.Icon icon="lock" />}
-            right={
-              <PaperInput.Icon
-                icon={secureTextEntry ? 'eye' : 'eye-off'}
-                onPress={() => setSecureTextEntry(!secureTextEntry)}
-              />
-            }
-            style={[styles.input, darkMode && styles.inputDark]}
-            textColor={darkMode ? '#FFFFFF' : '#1A2332'}
-            activeOutlineColor="#6200EE"
-          />
-
-          <Button
-            mode="contained"
-            onPress={handleLogin}
-            loading={loading}
-            disabled={loading}
-            style={styles.loginButton}
-            labelStyle={styles.loginButtonLabel}
-            buttonColor="#6200EE"
-          >
-            Login
-          </Button>
-
-          <Button
-            mode="text"
-            onPress={() => navigation.navigate('Register')}
-            style={styles.registerButton}
-            labelStyle={[styles.registerButtonLabel, darkMode && styles.textMuted]}
-          >
-            Don't have an account? Register
-          </Button>
-        </Surface>
-      </View>
-
-      <CustomAlert
-        visible={alertVisible}
-        title={alertTitle}
-        message={alertMessage}
-        buttons={alertButtons}
-        onClose={() => setAlertVisible(false)}
-      />
-    </KeyboardAvoidingView>
+      {alert && (
+        <CustomAlert
+          visible
+          title={alert.title}
+          message={alert.message}
+          buttons={alert.buttons || [{ text: 'OK' }]}
+          onClose={() => setAlert(null)}
+        />
+      )}
+    </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-  },
-  containerDark: {
-    backgroundColor: '#0A0A1A',
-  },
-  innerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  surface: {
-    padding: 24,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  surfaceDark: {
-    backgroundColor: '#16213E',
-  },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  logoText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1A2332',
-    marginBottom: 8,
-  },
-  textDark: {
-    color: '#FFFFFF',
-  },
-  textMuted: {
-    color: '#7F8C8D',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    textAlign: 'center',
-  },
+const styles = (c: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.paper },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  brand: { ...displayFont, fontSize: 34, color: c.ink, textAlign: 'center', letterSpacing: -0.5 },
+  tagline: { fontSize: 13, color: c.inkMuted, textAlign: 'center', marginTop: 4, marginBottom: 28 },
+  card: { backgroundColor: c.card, borderWidth: 1, borderColor: c.line, borderRadius: 20, padding: 20 },
+  heading: { ...displayFont, fontSize: 20, color: c.ink, marginBottom: 16 },
+  label: { fontSize: 12, color: c.inkMuted, marginBottom: 6, fontWeight: '600' },
   input: {
-    marginBottom: 16,
-    backgroundColor: 'transparent',
+    borderWidth: 1, borderColor: c.line, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: 14,
+    color: c.ink, marginBottom: 14, backgroundColor: c.card,
   },
-  inputDark: {
-    backgroundColor: 'transparent',
+  passwordRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1, borderColor: c.line, borderRadius: 12, marginBottom: 18, backgroundColor: c.card,
   },
-  loginButton: {
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  loginButtonLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    paddingVertical: 4,
-  },
-  registerButton: {
-    marginTop: 12,
-  },
-  registerButtonLabel: {
-    fontSize: 14,
-    color: '#6200EE',
-  },
+  primaryBtn: { backgroundColor: c.teal, borderRadius: 26, paddingVertical: 13, alignItems: 'center' },
+  primaryBtnText: { color: c.onTeal, fontSize: 15, fontWeight: '700' },
+  footerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
 });
 
 export default LoginScreen;
