@@ -1,1047 +1,390 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  Alert,
-  TouchableOpacity,
-  Image,
-  Platform,
-  StatusBar,
+  View, Text, StyleSheet, ScrollView, TextInput,
+  TouchableOpacity, Switch, ActivityIndicator,
 } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
-import {
-  Card,
-  Title,
-  List,
-  Switch,
-  Button,
-  TextInput,
-  Avatar,
-  Badge,
-  Divider,
-  Surface,
-  Modal,
-  Portal,
-  ActivityIndicator,
-  IconButton,
-  Snackbar,
-} from 'react-native-paper';
-import * as ImagePicker from 'expo-image-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import CustomAlert from '../components/CustomAlert';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'react-native';
+import { enableNotifications, disableNotifications, isExpoGo } from '../services/notifications';
 import api from '../services/api';
+import CustomAlert from '../components/CustomAlert';
+import { useTheme, displayFont } from '../context/ThemeContext';
+
+type Panel = 'none' | 'name' | 'password' | 'delete';
 
 const SettingsScreen = ({ navigation }: any) => {
-  const { darkMode, toggleDarkMode } = useTheme();
-  
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [isPremium, setIsPremium] = useState(false);
-  const [notifications, setNotifications] = useState(true);
-  const [editingName, setEditingName] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const { colors, darkMode, toggleDarkMode } = useTheme();
+  const s = styles(colors);
 
-  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [userId, setUserId] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [isPremium, setIsPremium] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [notifs, setNotifs] = useState(false);
+  const [panel, setPanel] = useState<Panel>('none');
+
+  const [newName, setNewName] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [alert, setAlert] = useState<{ title: string; message: string; buttons?: any[] } | null>(null);
 
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarColor, setSnackbarColor] = useState('#4CAF50');
-
-  const [alertVisible, setAlertVisible] = useState(false);
-  const [alertTitle, setAlertTitle] = useState('');
-  const [alertMessage, setAlertMessage] = useState('');
-  const [alertButtons, setAlertButtons] = useState<any[]>([]);
-
-  const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const showSnackbar = (message: string, isError: boolean = false) => {
-    setSnackbarMessage(message);
-    setSnackbarColor(isError ? '#EF5350' : '#4CAF50');
-    setSnackbarVisible(true);
-  };
-
-  const showAlert = (title: string, message: string, buttons?: any[]) => {
-    if (title !== 'Processing' && title !== 'Processing Payment') {
-      setAlertVisible(false);
-    }
-    setAlertTitle(title);
-    setAlertMessage(message);
-    setAlertButtons(buttons || [{ text: 'OK' }]);
-    setAlertVisible(true);
-  };
-
-  const closeAlert = () => {
-    setAlertVisible(false);
-    if (processingTimeoutRef.current) {
-      clearTimeout(processingTimeoutRef.current);
-      processingTimeoutRef.current = null;
-    }
-  };
-
-  useEffect(() => {
-    loadUserData();
-    loadProfileImage();
-    return () => {
-      if (processingTimeoutRef.current) {
-        clearTimeout(processingTimeoutRef.current);
+  const load = async () => {
+    const uid = (await AsyncStorage.getItem('userId')) || '';
+    setUserId(uid);
+    setName((await AsyncStorage.getItem('userName')) || '');
+    setEmail((await AsyncStorage.getItem('userEmail')) || '');
+    setProfileImage(await AsyncStorage.getItem('profileImage'));
+    setNotifs((await AsyncStorage.getItem('notificationsEnabled')) === 'true');
+    try {
+      if (uid) {
+        const res = await api.get(`/users/${uid}`);
+        setName(res.data.fullName || '');
+        setEmail(res.data.email || '');
+        setIsPremium(!!res.data.premium);
+        await AsyncStorage.setItem('isPremium', String(!!res.data.premium));
       }
-    };
-  }, []);
-
-  const loadUserData = async () => {
-    try {
-      const name = await AsyncStorage.getItem('userName');
-      const email = await AsyncStorage.getItem('userEmail');
-      const premium = await AsyncStorage.getItem('isPremium');
-      const notif = await AsyncStorage.getItem('notifications');
-      
-      setUserName(name || 'User');
-      setUserEmail(email || '');
-      setIsPremium(premium === 'true');
-      setNotifications(notif !== 'false');
-      setNewName(name || 'User');
-    } catch (error) {
-      console.log('Error loading settings:', error);
+    } catch {
+      setIsPremium((await AsyncStorage.getItem('isPremium')) === 'true');
     }
   };
 
-  const loadProfileImage = async () => {
-    setIsLoadingProfile(true);
-    try {
-      const image = await AsyncStorage.getItem('profileImage');
-      if (image) {
-        setProfileImage(image);
-      }
-    } catch (error) {
-      console.log('Error loading profile image:', error);
-    } finally {
-      setIsLoadingProfile(false);
-    }
-  };
+  useFocusEffect(useCallback(() => { load(); }, []));
 
-  const saveProfileImage = async (imageUri: string) => {
+  const pickProfilePhoto = async () => {
     try {
-      await AsyncStorage.setItem('profileImage', imageUri);
-      setProfileImage(imageUri);
-      showSnackbar('Profile picture updated.');
-    } catch (error) {
-      console.log('Error saving profile image:', error);
-      showSnackbar('Failed to save profile picture.', true);
-    }
-  };
-
-  const pickImage = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        showSnackbar('Permission to access gallery is required.', true);
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        setAlert({ title: 'Permission needed', message: 'Allow photo access to set a profile picture.' });
         return;
       }
-
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
-        base64: false,
+        quality: 0.6,
       });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const selectedImage = result.assets[0].uri;
-        await saveProfileImage(selectedImage);
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        const uri = result.assets[0].uri;
+        await AsyncStorage.setItem('profileImage', uri);
+        setProfileImage(uri);
       }
-    } catch (error) {
-      console.log('Error picking image:', error);
-      showSnackbar('Failed to select image.', true);
+    } catch {
+      setAlert({ title: 'Photo failed', message: 'Could not open your photos. Try again.' });
     }
   };
 
-  const takePhoto = async () => {
+  const toggleNotifs = async (value: boolean) => {
+    if (value) {
+      const granted = await enableNotifications();
+      setNotifs(granted);
+      if (!granted) {
+        setAlert({
+          title: isExpoGo ? 'Not available in Expo Go' : 'Permission needed',
+          message: isExpoGo
+            ? 'Notifications work in the installed NewsCred app, not the Expo Go preview. They will activate automatically once the app is built.'
+            : 'Allow notifications in your phone settings to enable this.',
+        });
+      }
+    } else {
+      await disableNotifications();
+      setNotifs(false);
+    }
+  };
+
+  const saveName = async () => {
+    if (!newName.trim()) return;
+    setBusy(true);
     try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        showSnackbar('Permission to access camera is required.', true);
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const capturedImage = result.assets[0].uri;
-        await saveProfileImage(capturedImage);
-      }
-    } catch (error) {
-      console.log('Error taking photo:', error);
-      showSnackbar('Failed to take photo.', true);
-    }
-  };
-
-  const showImagePickerOptions = () => {
-    showAlert(
-      'Profile Picture',
-      'Choose an option below:',
-      [
-        { 
-          text: 'Choose from Gallery', 
-          onPress: pickImage,
-          style: 'default'
-        },
-        { 
-          text: 'Take Photo', 
-          onPress: takePhoto,
-          style: 'default'
-        },
-        { 
-          text: 'Cancel', 
-          style: 'cancel' 
-        },
-      ]
-    );
-  };
-
-  const saveUserName = async () => {
-    if (newName.trim().length < 2) {
-      showSnackbar('Name must be at least 2 characters long.', true);
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const userId = await AsyncStorage.getItem('userId');
-      
-      await api.put(`/users/${userId}`, {
-        fullName: newName.trim(),
-      });
-      
+      await api.put(`/users/${userId}`, { fullName: newName.trim() });
       await AsyncStorage.setItem('userName', newName.trim());
-      setUserName(newName.trim());
-      setEditingName(false);
-      
-      showSnackbar('Profile updated successfully.');
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to update profile. Please try again.';
-      showSnackbar(message, true);
-    } finally {
-      setLoading(false);
-    }
+      setName(newName.trim());
+      setPanel('none');
+      setNewName('');
+      setAlert({ title: 'Saved', message: 'Your name was updated.' });
+    } catch (e: any) {
+      setAlert({ title: 'Update failed', message: e.response?.data?.message || 'Could not update your name.' });
+    } finally { setBusy(false); }
   };
 
-  const handleToggleDarkMode = (value: boolean) => {
-    toggleDarkMode();
-    showSnackbar(value ? 'Dark mode enabled.' : 'Light mode enabled.');
-  };
-
-  const toggleNotifications = async (value: boolean) => {
-    setNotifications(value);
-    await AsyncStorage.setItem('notifications', String(value));
-    showSnackbar(value ? 'Notifications enabled.' : 'Notifications disabled.');
-  };
-
-  const handleChangePassword = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      showSnackbar('Please fill in all password fields.', true);
+  const savePassword = async () => {
+    if (!currentPassword || !newPassword) {
+      setAlert({ title: 'Missing details', message: 'Enter your current and new password.' });
       return;
     }
-
-    if (newPassword.length < 6) {
-      showSnackbar('New password must be at least 6 characters long.', true);
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      showSnackbar('New passwords do not match.', true);
-      return;
-    }
-
-    setPasswordLoading(true);
+    setBusy(true);
     try {
-      const userId = await AsyncStorage.getItem('userId');
-      
-      await api.put(`/users/${userId}/password`, {
-        currentPassword,
-        newPassword,
-      });
-      
-      showSnackbar('Password changed successfully.');
-      
+      await api.put(`/users/${userId}/password`, { currentPassword, newPassword });
+      setPanel('none');
       setCurrentPassword('');
       setNewPassword('');
-      setConfirmPassword('');
-      setPasswordModalVisible(false);
-      
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to change password. Please try again.';
-      showSnackbar(message, true);
-    } finally {
-      setPasswordLoading(false);
-    }
+      setAlert({ title: 'Password changed', message: 'Use the new password next time you sign in.' });
+    } catch (e: any) {
+      setAlert({ title: 'Change failed', message: e.response?.data?.message || 'Could not change the password.' });
+    } finally { setBusy(false); }
   };
 
-  const handleManageSubscription = () => {
-    if (isPremium) {
-      showAlert(
-        'Manage Subscription',
-        'You are currently on the Premium plan.\n\nMonthly: GH₵ 60.00\n\nWould you like to cancel your subscription?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Cancel Subscription',
-            onPress: async () => {
-              await AsyncStorage.setItem('isPremium', 'false');
-              setIsPremium(false);
-              showSnackbar('Your premium subscription has been cancelled.');
-            }
-          }
-        ]
-      );
-    } else {
-      navigation.navigate('Payment');
-    }
-  };
-
-  const handleExportData = async () => {
-    try {
-      showSnackbar('Preparing your data...');
-      
-      setTimeout(() => {
-        showAlert(
-          'Data Export',
-          `Your data has been prepared.\n\nUser: ${userName}\nEmail: ${userEmail}\nPremium: ${isPremium ? 'Yes' : 'No'}\n\nIn a production app, you would receive a downloadable file.`,
-          [{ text: 'OK' }]
-        );
-      }, 1500);
-      
-    } catch (error) {
-      showSnackbar('Failed to export data. Please try again.', true);
-    }
-  };
-
-  const handleDeleteAccount = () => {
-    showAlert(
-      'Delete Account',
-      'Are you sure you want to delete your account?\n\nThis action is PERMANENT and cannot be undone.\n\nAll your data will be removed:\nAccount information\nAll analyzed articles\nSaved preferences',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Continue',
-          onPress: () => showDeleteConfirmation()
-        }
-      ]
-    );
-  };
-
-  const showDeleteConfirmation = () => {
-    Alert.alert(
-      'Confirm Deletion',
-      'To confirm, type "DELETE" below:',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete Permanently',
-          style: 'destructive',
-          onPress: () => showPasswordPrompt()
-        }
-      ]
-    );
-  };
-
-  const showPasswordPrompt = () => {
-    Alert.prompt(
-      'Enter Password',
-      'Please enter your password to confirm account deletion:',
-      [
-        { text: 'Cancel', style: 'cancel' },
+  const signOut = () => {
+    setAlert({
+      title: 'Sign out?',
+      message: 'You can sign back in any time.',
+      buttons: [
+        { text: 'Stay', style: 'cancel' },
         {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async (password) => {
-            if (!password) {
-              showSnackbar('Password is required.', true);
-              return;
-            }
-            await performDeleteAccount(password);
-          }
-        }
-      ],
-      'secure-text'
-    );
-  };
-
-  const performDeleteAccount = async (password: string) => {
-    try {
-      const userId = await AsyncStorage.getItem('userId');
-      
-      setLoading(true);
-      
-      await api.delete(`/users/${userId}`, {
-        data: {
-          password: password,
-          confirmation: 'DELETE'
-        }
-      });
-      
-      await AsyncStorage.clear();
-      
-      showAlert(
-        'Account Deleted',
-        'Your account has been permanently deleted.\n\nWe are sorry to see you go.',
-        [
-          { 
-            text: 'OK',
-            onPress: () => navigation.replace('Login')
-          }
-        ]
-      );
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to delete account. Please try again.';
-      showSnackbar(message, true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePrivacySecurity = () => {
-    showAlert(
-      'Privacy and Security',
-      'Manage your privacy and security settings:\n\nYour data is encrypted\nWe never share your personal information\nYou can request data deletion\n\nWant to delete your account?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete Account',
-          style: 'cancel',
-          onPress: handleDeleteAccount
-        }
-      ]
-    );
-  };
-
-  const handleLanguageSelect = () => {
-    showAlert(
-      'Select Language',
-      'Choose your preferred language:\n\nEnglish (Default)\nSpanish (Coming Soon)\nFrench (Coming Soon)\nGerman (Coming Soon)\nChinese (Coming Soon)',
-      [{ text: 'OK' }]
-    );
-  };
-
-  const handleLogout = async () => {
-    showAlert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
+          text: 'Sign out',
           onPress: async () => {
-            await AsyncStorage.clear();
-            navigation.replace('Login');
-          }
+            await AsyncStorage.multiRemove([
+              'token', 'refreshToken', 'userId', 'userName', 'userEmail', 'isPremium', 'analysisCount',
+            ]);
+            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+          },
         },
-      ]
-    );
+      ],
+    });
   };
 
-  const renderProfileSection = () => (
-    <Card style={[styles.card, darkMode && styles.cardDark]} mode="elevated">
-      <Card.Content>
-        <Text style={[styles.sectionTitle, darkMode && styles.textDark]}>Profile</Text>
-        
-        <View style={styles.profileRow}>
-          <TouchableOpacity onPress={showImagePickerOptions} activeOpacity={0.8}>
-            {isLoadingProfile ? (
-              <View style={[styles.profileImage, styles.loadingAvatar]}>
-                <ActivityIndicator size="small" color="#6200EE" />
-              </View>
-            ) : profileImage ? (
-              <Image 
-                source={{ uri: profileImage }} 
-                style={styles.profileImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <Avatar.Text 
-                size={70} 
-                label={userName.charAt(0).toUpperCase()} 
-                style={styles.avatar}
-                color="#FFFFFF"
-              />
-            )}
-            <View style={styles.cameraIconContainer}>
-              <IconButton
-                icon="camera"
-                size={16}
-                iconColor="#FFFFFF"
-                style={styles.cameraIcon}
-              />
-            </View>
-          </TouchableOpacity>
-          <View style={styles.profileInfo}>
-            {editingName ? (
-              <View style={styles.editNameContainer}>
-                <TextInput
-                  mode="outlined"
-                  value={newName}
-                  onChangeText={setNewName}
-                  style={[styles.nameInput, darkMode && styles.inputDark]}
-                  textColor={darkMode ? '#FFFFFF' : '#1A2332'}
-                  activeOutlineColor="#6200EE"
-                  dense
-                  disabled={loading}
-                />
-                <View style={styles.editButtons}>
-                  <Button 
-                    mode="contained" 
-                    onPress={saveUserName} 
-                    loading={loading}
-                    disabled={loading}
-                    style={styles.saveButton}
-                    labelStyle={styles.saveButtonLabel}
-                    buttonColor="#4CAF50"
-                  >
-                    Save
-                  </Button>
-                  <Button 
-                    mode="outlined" 
-                    onPress={() => setEditingName(false)}
-                    style={styles.cancelButton}
-                    labelStyle={styles.cancelButtonLabel}
-                  >
-                    Cancel
-                  </Button>
-                </View>
-              </View>
-            ) : (
-              <>
-                <Text style={[styles.userName, darkMode && styles.textDark]}>{userName}</Text>
-                <Text style={[styles.userEmail, darkMode && styles.textMuted]}>{userEmail}</Text>
-                {isPremium && (
-                  <Badge style={styles.premiumBadge}>Premium</Badge>
-                )}
-                <Button 
-                  mode="text" 
-                  onPress={() => setEditingName(true)}
-                  labelStyle={styles.editLink}
-                  icon="pencil"
-                >
-                  Edit Profile
-                </Button>
-              </>
-            )}
-          </View>
-        </View>
-      </Card.Content>
-    </Card>
-  );
+  const deleteAccount = async () => {
+    if (!deletePassword) {
+      setAlert({ title: 'Password needed', message: 'Enter your password to confirm deletion.' });
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.delete(`/users/${userId}`, {
+        data: { password: deletePassword, confirmation: 'DELETE' },
+      });
+      await AsyncStorage.clear();
+      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+    } catch (e: any) {
+      setAlert({ title: 'Deletion failed', message: e.response?.data?.message || 'Could not delete the account.' });
+    } finally { setBusy(false); }
+  };
 
-  const renderPreferencesSection = () => (
-    <Card style={[styles.card, darkMode && styles.cardDark]} mode="elevated">
-      <Card.Content>
-        <Text style={[styles.sectionTitle, darkMode && styles.textDark]}>Preferences</Text>
-        
-        <List.Item
-          title="Dark Mode"
-          description="Switch theme (global)"
-          titleStyle={[styles.listItemTitle, darkMode && styles.textDark]}
-          descriptionStyle={[styles.listItemDesc, darkMode && styles.textMuted]}
-          right={() => (
-            <Switch
-              value={darkMode}
-              onValueChange={handleToggleDarkMode}
-              trackColor={{ false: '#767577', true: '#6200EE' }}
-              thumbColor={darkMode ? '#FFFFFF' : '#F4F3F4'}
-            />
-          )}
-        />
-
-        <Divider style={[styles.divider, darkMode && styles.dividerDark]} />
-
-        <List.Item
-          title="Notifications"
-          description="Receive alerts and updates"
-          titleStyle={[styles.listItemTitle, darkMode && styles.textDark]}
-          descriptionStyle={[styles.listItemDesc, darkMode && styles.textMuted]}
-          right={() => (
-            <Switch
-              value={notifications}
-              onValueChange={toggleNotifications}
-              trackColor={{ false: '#767577', true: '#6200EE' }}
-              thumbColor={notifications ? '#FFFFFF' : '#F4F3F4'}
-            />
-          )}
-        />
-
-        <Divider style={[styles.divider, darkMode && styles.dividerDark]} />
-
-        <List.Item
-          title="Language"
-          description="Change app language"
-          titleStyle={[styles.listItemTitle, darkMode && styles.textDark]}
-          descriptionStyle={[styles.listItemDesc, darkMode && styles.textMuted]}
-          right={() => (
-            <Text style={[styles.rightText, darkMode && styles.textMuted]}>English</Text>
-          )}
-          onPress={handleLanguageSelect}
-        />
-      </Card.Content>
-    </Card>
-  );
-
-  const renderAccountSection = () => (
-    <Card style={[styles.card, darkMode && styles.cardDark]} mode="elevated">
-      <Card.Content>
-        <Text style={[styles.sectionTitle, darkMode && styles.textDark]}>Account</Text>
-        
-        <List.Item
-          title="Change Password"
-          titleStyle={[styles.listItemTitle, darkMode && styles.textDark]}
-          right={() => <List.Icon icon="chevron-right" color={darkMode ? '#7F8C8D' : '#7F8C8D'} />}
-          onPress={() => setPasswordModalVisible(true)}
-        />
-
-        <Divider style={[styles.divider, darkMode && styles.dividerDark]} />
-
-        <List.Item
-          title="Privacy and Security"
-          titleStyle={[styles.listItemTitle, darkMode && styles.textDark]}
-          right={() => <List.Icon icon="chevron-right" color={darkMode ? '#7F8C8D' : '#7F8C8D'} />}
-          onPress={handlePrivacySecurity}
-        />
-
-        <Divider style={[styles.divider, darkMode && styles.dividerDark]} />
-
-        <List.Item
-          title={isPremium ? 'Manage Subscription' : 'Upgrade to Premium'}
-          titleStyle={[styles.listItemTitle, darkMode && styles.textDark]}
-          right={() => <List.Icon icon="chevron-right" color={darkMode ? '#7F8C8D' : '#7F8C8D'} />}
-          onPress={handleManageSubscription}
-        />
-
-        <Divider style={[styles.divider, darkMode && styles.dividerDark]} />
-
-        <List.Item
-          title="Export Data"
-          titleStyle={[styles.listItemTitle, darkMode && styles.textDark]}
-          right={() => <List.Icon icon="chevron-right" color={darkMode ? '#7F8C8D' : '#7F8C8D'} />}
-          onPress={handleExportData}
-        />
-
-        <Divider style={[styles.divider, darkMode && styles.dividerDark]} />
-
-        <List.Item
-          title="Logout"
-          titleStyle={[styles.listItemTitle, styles.logoutText]}
-          right={() => <List.Icon icon="logout" color="#EF5350" />}
-          onPress={handleLogout}
-        />
-      </Card.Content>
-    </Card>
-  );
-
-  const renderAboutSection = () => (
-    <Card style={[styles.card, darkMode && styles.cardDark]} mode="elevated">
-      <Card.Content>
-        <Text style={[styles.sectionTitle, darkMode && styles.textDark]}>About</Text>
-        
-        <List.Item
-          title="Version 1.0.0"
-          titleStyle={[styles.listItemTitle, darkMode && styles.textDark]}
-          right={() => <List.Icon icon="chevron-right" color={darkMode ? '#7F8C8D' : '#7F8C8D'} />}
-          onPress={() => showAlert(
-            'About NewsCred', 
-            'NewsCred v1.0.0\n\nIntelligent News Credibility Platform\n\nDeveloped with care\nCopyright 2026 NewsCred Inc.'
-          )}
-        />
-
-        <Divider style={[styles.divider, darkMode && styles.dividerDark]} />
-
-        <List.Item
-          title="Terms of Service"
-          titleStyle={[styles.listItemTitle, darkMode && styles.textDark]}
-          right={() => <List.Icon icon="chevron-right" color={darkMode ? '#7F8C8D' : '#7F8C8D'} />}
-          onPress={() => showAlert(
-            'Terms of Service', 
-            'Terms of Service\n\nBy using NewsCred, you agree to:\nUse the app responsibly\nNot misuse the analysis features\nRespect intellectual property\n\nFull terms available on our website.'
-          )}
-        />
-
-        <Divider style={[styles.divider, darkMode && styles.dividerDark]} />
-
-        <List.Item
-          title="Privacy Policy"
-          titleStyle={[styles.listItemTitle, darkMode && styles.textDark]}
-          right={() => <List.Icon icon="chevron-right" color={darkMode ? '#7F8C8D' : '#7F8C8D'} />}
-          onPress={() => showAlert(
-            'Privacy Policy', 
-            'Privacy Policy\n\nWe value your privacy:\nYour data is encrypted\nWe do not sell your information\nYou can delete your data anytime\n\nFull policy available on our website.'
-          )}
-        />
-      </Card.Content>
-    </Card>
-  );
+  const initials = name.split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
 
   return (
-    <SafeAreaView style={[styles.container, darkMode && styles.containerDark]}>
-      <View style={styles.statusBarSpacer} />
-      <Surface style={[styles.header, darkMode && styles.headerDark]} elevation={2}>
-        <View style={styles.headerContent}>
-          <IconButton
-            icon="arrow-left"
-            size={24}
-            onPress={() => navigation.goBack()}
-            iconColor={darkMode ? '#FFFFFF' : '#1A2332'}
-          />
-          <Text style={[styles.headerTitle, darkMode && styles.textDark]}>Settings</Text>
-          <View style={{ width: 48 }} />
-        </View>
-      </Surface>
+    <SafeAreaView style={s.container} edges={['top']}>
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <Text style={s.pageTitle}>Settings</Text>
 
-      <ScrollView 
-        style={[styles.scrollView, darkMode && styles.scrollViewDark]}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {renderProfileSection()}
-        {renderPreferencesSection()}
-        {renderAccountSection()}
-        {renderAboutSection()}
-        
-        <View style={{ height: 40 }} />
+        {/* Profile */}
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={pickProfilePhoto} activeOpacity={0.8}>
+              {profileImage ? (
+                <Image source={{ uri: profileImage }} style={{ width: 48, height: 48, borderRadius: 24 }} />
+              ) : (
+                <View style={s.avatar}><Text style={s.avatarText}>{initials}</Text></View>
+              )}
+              <View style={s.avatarEdit}><Text style={{ fontSize: 9, color: colors.onTeal, fontWeight: '700' }}>Edit</Text></View>
+            </TouchableOpacity>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={s.name}>{name || 'Your name'}</Text>
+              <Text style={s.email}>{email}</Text>
+            </View>
+            <View style={[s.tierBadge, { backgroundColor: isPremium ? colors.tealSoft : colors.line }]}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: isPremium ? colors.teal : colors.inkMuted }}>
+                {isPremium ? 'Premium' : 'Free'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Membership */}
+        <Text style={s.groupLabel}>Membership</Text>
+        <View style={s.card}>
+          {isPremium ? (
+            <Text style={s.rowNote}>
+              You are on NewsCred Premium: unlimited checks and full forensic reports.
+              For billing questions, contact support.
+            </Text>
+          ) : (
+            <Row
+              label="Upgrade to Premium"
+              note="Unlimited checks, full reports, live fact-check sources"
+              action="Upgrade"
+              onPress={() => navigation.navigate('Payment')}
+              colors={colors}
+            />
+          )}
+        </View>
+
+        {/* Appearance */}
+        <Text style={s.groupLabel}>Appearance</Text>
+        <View style={s.card}>
+          <View style={s.rowBetween}>
+            <View>
+              <Text style={s.rowLabel}>Dark mode</Text>
+              <Text style={s.rowNote}>Ink-on-navy reading theme</Text>
+            </View>
+            <Switch
+              value={darkMode}
+              onValueChange={toggleDarkMode}
+              trackColor={{ false: colors.line, true: colors.teal }}
+              thumbColor={colors.card}
+            />
+          </View>
+          <View style={s.divider} />
+          <View style={s.rowBetween}>
+            <View>
+              <Text style={s.rowLabel}>Notifications</Text>
+              <Text style={s.rowNote}>Get notified when a check completes</Text>
+            </View>
+            <Switch
+              value={notifs}
+              onValueChange={toggleNotifs}
+              trackColor={{ false: colors.line, true: colors.teal }}
+              thumbColor={colors.card}
+            />
+          </View>
+        </View>
+
+        {/* Account */}
+        <Text style={s.groupLabel}>Account</Text>
+        <View style={s.card}>
+          <Row label="Change display name" action={panel === 'name' ? 'Close' : 'Edit'}
+            onPress={() => setPanel(panel === 'name' ? 'none' : 'name')} colors={colors} />
+          {panel === 'name' && (
+            <View style={s.panel}>
+              <TextInput style={s.input} placeholder={name || 'New name'} placeholderTextColor={colors.hint}
+                value={newName} onChangeText={setNewName} />
+              <PrimaryButton label="Save name" onPress={saveName} busy={busy} colors={colors} />
+            </View>
+          )}
+
+          <View style={s.divider} />
+
+          <Row label="Change password" action={panel === 'password' ? 'Close' : 'Edit'}
+            onPress={() => setPanel(panel === 'password' ? 'none' : 'password')} colors={colors} />
+          {panel === 'password' && (
+            <View style={s.panel}>
+              <TextInput style={s.input} placeholder="Current password" placeholderTextColor={colors.hint}
+                value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry />
+              <TextInput style={s.input} placeholder="New password" placeholderTextColor={colors.hint}
+                value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+              <PrimaryButton label="Change password" onPress={savePassword} busy={busy} colors={colors} />
+            </View>
+          )}
+        </View>
+
+        {/* Help */}
+        <Text style={s.groupLabel}>Help</Text>
+        <View style={s.card}>
+          <Row
+            label="How we score"
+            note="See exactly how scores and verdicts are calculated"
+            action="View"
+            onPress={() => navigation.navigate('HowWeScore')}
+            colors={colors}
+          />
+          <View style={s.divider} />
+          <Row
+            label="Replay welcome tour"
+            note="See the quick intro to NewsCred again"
+            action="Replay"
+            onPress={() => navigation.navigate('Onboarding')}
+            colors={colors}
+          />
+        </View>
+
+        {/* Session */}
+        <Text style={s.groupLabel}>Session</Text>
+        <View style={s.card}>
+          <Row label="Sign out" action="Sign out" onPress={signOut} colors={colors} />
+          <View style={s.divider} />
+          <Row
+            label="Delete account"
+            note="Removes your account and all saved checks"
+            action={panel === 'delete' ? 'Close' : 'Delete'}
+            danger
+            onPress={() => setPanel(panel === 'delete' ? 'none' : 'delete')}
+            colors={colors}
+          />
+          {panel === 'delete' && (
+            <View style={s.panel}>
+              <Text style={[s.rowNote, { marginBottom: 8 }]}>
+                This cannot be undone. Enter your password to confirm.
+              </Text>
+              <TextInput style={s.input} placeholder="Your password" placeholderTextColor={colors.hint}
+                value={deletePassword} onChangeText={setDeletePassword} secureTextEntry />
+              <TouchableOpacity
+                style={[s.primaryBtn, { backgroundColor: colors.bad }]}
+                onPress={deleteAccount} disabled={busy} activeOpacity={0.85}
+              >
+                {busy ? <ActivityIndicator color="#FFFFFF" /> :
+                  <Text style={[s.primaryBtnText, { color: '#FFFFFF' }]}>Delete my account</Text>}
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        <Text style={s.footer}>NewsCred · Intelligent news credibility assessment</Text>
+        <View style={{ height: 24 }} />
       </ScrollView>
 
-      <Portal>
-        <Modal
-          visible={passwordModalVisible}
-          onDismiss={() => setPasswordModalVisible(false)}
-          contentContainerStyle={[styles.modalContainer, darkMode && styles.modalContainerDark]}
-        >
-          <Text style={[styles.modalTitle, darkMode && styles.textDark]}>Change Password</Text>
-          
-          <TextInput
-            mode="outlined"
-            label="Current Password"
-            value={currentPassword}
-            onChangeText={setCurrentPassword}
-            secureTextEntry
-            style={[styles.modalInput, darkMode && styles.inputDark]}
-            textColor={darkMode ? '#FFFFFF' : '#1A2332'}
-            activeOutlineColor="#6200EE"
-            left={<TextInput.Icon icon="lock" />}
-          />
-
-          <TextInput
-            mode="outlined"
-            label="New Password (min 6 chars)"
-            value={newPassword}
-            onChangeText={setNewPassword}
-            secureTextEntry
-            style={[styles.modalInput, darkMode && styles.inputDark]}
-            textColor={darkMode ? '#FFFFFF' : '#1A2332'}
-            activeOutlineColor="#6200EE"
-            left={<TextInput.Icon icon="lock-plus" />}
-          />
-
-          <TextInput
-            mode="outlined"
-            label="Confirm New Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            style={[styles.modalInput, darkMode && styles.inputDark]}
-            textColor={darkMode ? '#FFFFFF' : '#1A2332'}
-            activeOutlineColor="#6200EE"
-            left={<TextInput.Icon icon="lock-check" />}
-          />
-
-          <View style={styles.modalButtons}>
-            <Button
-              mode="outlined"
-              onPress={() => {
-                setPasswordModalVisible(false);
-                setCurrentPassword('');
-                setNewPassword('');
-                setConfirmPassword('');
-              }}
-              style={styles.modalCancelButton}
-              labelStyle={styles.modalCancelLabel}
-            >
-              Cancel
-            </Button>
-
-            <Button
-              mode="contained"
-              onPress={handleChangePassword}
-              loading={passwordLoading}
-              disabled={passwordLoading}
-              style={styles.modalSaveButton}
-              labelStyle={styles.modalSaveLabel}
-              buttonColor="#6200EE"
-            >
-              Update
-            </Button>
-          </View>
-        </Modal>
-      </Portal>
-
-      <CustomAlert
-        visible={alertVisible}
-        title={alertTitle}
-        message={alertMessage}
-        buttons={alertButtons}
-        onClose={closeAlert}
-      />
-
-      <Snackbar
-        visible={snackbarVisible}
-        onDismiss={() => setSnackbarVisible(false)}
-        duration={2500}
-        style={[styles.snackbar, { backgroundColor: snackbarColor }]}
-        wrapperStyle={styles.snackbarWrapper}
-      >
-        <Text style={styles.snackbarText}>{snackbarMessage}</Text>
-      </Snackbar>
+      {alert && (
+        <CustomAlert visible title={alert.title} message={alert.message}
+          buttons={alert.buttons || [{ text: 'OK' }]} onClose={() => setAlert(null)} />
+      )}
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
+const Row = ({ label, note, action, onPress, danger, colors }: any) => (
+  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+    <View style={{ flex: 1, paddingRight: 12 }}>
+      <Text style={{ fontSize: 14, fontWeight: '600', color: danger ? colors.bad : colors.ink }}>{label}</Text>
+      {!!note && <Text style={{ fontSize: 12, color: colors.inkMuted, marginTop: 2 }}>{note}</Text>}
+    </View>
+    <TouchableOpacity onPress={onPress}>
+      <Text style={{ fontSize: 13, fontWeight: '700', color: danger ? colors.bad : colors.teal }}>{action}</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+const PrimaryButton = ({ label, onPress, busy, colors }: any) => (
+  <TouchableOpacity
+    style={{ backgroundColor: colors.teal, borderRadius: 24, paddingVertical: 11, alignItems: 'center' }}
+    onPress={onPress} disabled={busy} activeOpacity={0.85}
+  >
+    {busy ? <ActivityIndicator color={colors.onTeal} /> :
+      <Text style={{ color: colors.onTeal, fontSize: 14, fontWeight: '700' }}>{label}</Text>}
+  </TouchableOpacity>
+);
+
+const styles = (c: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.paper },
+  scroll: { padding: 16 },
+  pageTitle: { ...displayFont, fontSize: 22, color: c.ink, marginBottom: 14 },
+  card: { backgroundColor: c.card, borderWidth: 1, borderColor: c.line, borderRadius: 18, padding: 16, marginBottom: 8 },
+  groupLabel: { fontSize: 12, fontWeight: '700', color: c.inkMuted, marginTop: 10, marginBottom: 6, marginLeft: 4, textTransform: 'uppercase', letterSpacing: 0.6 },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: c.tealSoft, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: c.teal, fontWeight: '700', fontSize: 16 },
+  avatarEdit: {
+    position: 'absolute', bottom: -2, right: -2,
+    backgroundColor: c.teal, borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1,
   },
-  containerDark: {
-    backgroundColor: '#0A0A1A',
+  name: { fontSize: 16, fontWeight: '700', color: c.ink },
+  email: { fontSize: 12, color: c.inkMuted, marginTop: 2 },
+  tierBadge: { borderRadius: 12, paddingVertical: 4, paddingHorizontal: 10 },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rowLabel: { fontSize: 14, fontWeight: '600', color: c.ink },
+  rowNote: { fontSize: 12, color: c.inkMuted, marginTop: 2, lineHeight: 18 },
+  divider: { height: 1, backgroundColor: c.line, marginVertical: 14 },
+  panel: { marginTop: 12 },
+  input: {
+    borderWidth: 1, borderColor: c.line, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 11, fontSize: 14,
+    color: c.ink, marginBottom: 10, backgroundColor: c.card,
   },
-  statusBarSpacer: {
-    height: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-    backgroundColor: 'transparent',
-  },
-  header: {
-    backgroundColor: '#FFFFFF',
-  },
-  headerDark: {
-    backgroundColor: '#16213E',
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A2332',
-  },
-  textDark: {
-    color: '#FFFFFF',
-  },
-  textMuted: {
-    color: '#7F8C8D',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewDark: {
-    backgroundColor: '#0A0A1A',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 20,
-  },
-  card: {
-    marginBottom: 16,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  cardDark: {
-    backgroundColor: '#16213E',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1A2332',
-    marginBottom: 12,
-  },
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  profileImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    borderWidth: 2,
-    borderColor: '#6200EE',
-  },
-  loadingAvatar: {
-    backgroundColor: '#F5F7FA',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatar: {
-    backgroundColor: '#6200EE',
-    marginRight: 0,
-  },
-  cameraIconContainer: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#6200EE',
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  cameraIcon: {
-    margin: 2,
-    width: 24,
-    height: 24,
-  },
-  profileInfo: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A2332',
-  },
-  userEmail: {
-    fontSize: 13,
-    color: '#7F8C8D',
-    marginTop: 2,
-  },
-  premiumBadge: {
-    backgroundColor: '#FFA726',
-    color: '#FFFFFF',
-    alignSelf: 'flex-start',
-    marginTop: 4,
-  },
-  editLink: {
-    color: '#6200EE',
-    fontSize: 13,
-    marginTop: 4,
-  },
-  editNameContainer: {
-    width: '100%',
-  },
-  nameInput: {
-    marginBottom: 8,
-    backgroundColor: 'transparent',
-  },
-  inputDark: {
-    backgroundColor: 'transparent',
-  },
-  editButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  saveButton: {
-    flex: 1,
-    borderRadius: 8,
-  },
-  saveButtonLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  cancelButton: {
-    flex: 1,
-    borderRadius: 8,
-  },
-  cancelButtonLabel: {
-    fontSize: 12,
-    color: '#6200EE',
-  },
-  listItemTitle: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#1A2332',
-  },
-  listItemDesc: {
-    fontSize: 12,
-    color: '#7F8C8D',
-  },
-  rightText: {
-    fontSize: 13,
-    color: '#7F8C8D',
-  },
-  divider: {
-    backgroundColor: '#F0F0F0',
-  },
-  dividerDark: {
-    backgroundColor: '#2A3A4F',
-  },
-  logoutText: {
-    color: '#EF5350',
-  },
-  modalContainer: {
-    backgroundColor: '#FFFFFF',
-    margin: 24,
-    padding: 24,
-    borderRadius: 16,
-    maxWidth: 400,
-    alignSelf: 'center',
-    width: '90%',
-  },
-  modalContainerDark: {
-    backgroundColor: '#16213E',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1A2332',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  modalInput: {
-    marginBottom: 12,
-    backgroundColor: 'transparent',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-    gap: 12,
-  },
-  modalCancelButton: {
-    flex: 1,
-    borderRadius: 8,
-  },
-  modalCancelLabel: {
-    color: '#6200EE',
-  },
-  modalSaveButton: {
-    flex: 1,
-    borderRadius: 8,
-  },
-  modalSaveLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  snackbar: {
-    marginBottom: 16,
-    borderRadius: 8,
-  },
-  snackbarWrapper: {
-    marginBottom: 20,
-  },
-  snackbarText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-  },
+  primaryBtn: { borderRadius: 24, paddingVertical: 11, alignItems: 'center' },
+  primaryBtnText: { fontSize: 14, fontWeight: '700' },
+  footer: { fontSize: 11, color: c.hint, textAlign: 'center', marginTop: 16 },
 });
 
 export default SettingsScreen;
