@@ -87,6 +87,7 @@ export interface ArticleAnalysisResponse {
   credibilityVerdict: CredibilityVerdict;
   analysisSummary: string;
   summary?: string;
+  contentSummary?: string;
   sourceReliability: ReliabilityLevel;
   contentQuality: ReliabilityLevel;
   evidenceQuality: ReliabilityLevel;
@@ -187,6 +188,8 @@ export type RootStackParamList = {
   SourceDatabase: undefined;
   Statistics: undefined;
   SavedArticles: undefined;
+  ImageScanner: undefined;
+  AudioScanner: undefined;
   AnalysisDetail: {
     result: ArticleAnalysisResponse;
   };

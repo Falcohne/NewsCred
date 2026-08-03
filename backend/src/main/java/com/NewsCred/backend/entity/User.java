@@ -1,10 +1,10 @@
 package com.NewsCred.backend.entity;
 
-import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.UuidGenerator;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -14,8 +14,8 @@ import java.util.List;
 public class User implements UserDetails {
 
     @Id
-    @GeneratedValue(generator = "uuid")
-    @GenericGenerator(name = "uuid", strategy = "uuid2")
+    @GeneratedValue
+    @UuidGenerator
     private String id;
 
     @Column(unique = true, nullable = false)
@@ -40,6 +40,14 @@ public class User implements UserDetails {
     /** Granted automatically at login if the email is in the admin allowlist. */
     @Column(columnDefinition = "boolean not null default false")
     private boolean isAdmin = false;
+
+    /**
+     * Bumped to invalidate every previously issued access/refresh token at once
+     * (logout-everywhere, password change). Tokens embed the version they were
+     * issued with; a mismatch against the current value means "revoked".
+     */
+    @Column(name = "token_version", columnDefinition = "integer not null default 0")
+    private int tokenVersion = 0;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -80,6 +88,9 @@ public class User implements UserDetails {
 
     public int getAnalysisCount() { return analysisCount; }
     public void setAnalysisCount(int analysisCount) { this.analysisCount = analysisCount; }
+
+    public int getTokenVersion() { return tokenVersion; }
+    public void setTokenVersion(int tokenVersion) { this.tokenVersion = tokenVersion; }
 
     public boolean isEmailVerified() { return emailVerified; }
     public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }

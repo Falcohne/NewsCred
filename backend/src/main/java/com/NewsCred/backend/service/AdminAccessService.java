@@ -14,9 +14,10 @@ import java.util.Set;
  *
  * Set ADMIN_EMAILS as a comma-separated list of teammate emails. Any user
  * who logs in with a matching email is automatically promoted to admin
- * (self-service - no one needs direct database access). Removing an email
- * from the list does NOT retroactively revoke access; that would need a
- * manual demotion, which is intentionally out of scope for a class project.
+ * (self-service - no one needs direct database access). On every login the
+ * allowlist is re-checked: an admin whose email was removed from
+ * ADMIN_EMAILS is demoted on their next login, so revoking access is just
+ * an env var change away rather than a manual DB edit.
  */
 @Service
 public class AdminAccessService {
@@ -36,12 +37,16 @@ public class AdminAccessService {
         }
     }
 
-    /** Call after successful login. Promotes the user if their email is allowlisted. */
+    /**
+     * Call after successful login. Promotes the user if their email is
+     * allowlisted, and demotes them if it no longer is (or the allowlist is
+     * empty/unset, which is treated as "no admins").
+     */
     public void syncAdminStatus(User user) {
         if (user == null || user.getEmail() == null) return;
         boolean shouldBeAdmin = allowlist.contains(user.getEmail().toLowerCase().trim());
-        if (shouldBeAdmin && !user.isAdmin()) {
-            user.setAdmin(true);
+        if (shouldBeAdmin != user.isAdmin()) {
+            user.setAdmin(shouldBeAdmin);
             userRepository.save(user);
         }
     }

@@ -1,5 +1,6 @@
 package com.NewsCred.backend.security;
 
+import com.NewsCred.backend.entity.User;
 import com.NewsCred.backend.util.JwtUtil;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -9,10 +10,10 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 @Component
@@ -52,10 +53,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 
                 // Load user details
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                
-                // Validate token
-                if (jwtUtil.validateToken(token, username)) {
-                    
+
+                // Validate token: signature/expiry/username match, AND the
+                // token's embedded version must match the user's current
+                // version (a mismatch means it was revoked - logout-everywhere
+                // or a password change since this token was issued).
+                boolean versionOk = !(userDetails instanceof User)
+                        || jwtUtil.extractTokenVersion(token) == ((User) userDetails).getTokenVersion();
+
+                if (versionOk && jwtUtil.validateToken(token, username)) {
+
                     // Create authentication token
                     UsernamePasswordAuthenticationToken authToken = 
                         new UsernamePasswordAuthenticationToken(

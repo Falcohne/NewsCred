@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import BreakdownBar from '../components/ui/BreakdownBar';
 import { useTheme, displayFont, verdictLabel } from '../context/ThemeContext';
@@ -10,6 +11,7 @@ const VERDICTS = ['CREDIBLE', 'LIKELY_CREDIBLE', 'UNSURE', 'MISLEADING', 'NOT_CR
 
 const StatisticsScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const s = styles(colors);
 
   const [articles, setArticles] = useState<any[]>([]);
@@ -43,7 +45,7 @@ const StatisticsScreen = ({ navigation }: any) => {
 
   const total = articles.length;
   const avgScore = total ? articles.reduce((a, x) => a + (x.overallScore || 0), 0) / total : 0;
-  const sources = new Set(articles.map((a) => a.sourceName || 'Pasted text')).size;
+  const sources = new Set(articles.map((a) => a.sourceName || t('statistics.pastedTextFallback'))).size;
   const counts: Record<string, number> = {};
   VERDICTS.forEach((v) => (counts[v] = 0));
   articles.forEach((a) => { if (counts[a.credibilityVerdict] !== undefined) counts[a.credibilityVerdict]++; });
@@ -55,22 +57,22 @@ const StatisticsScreen = ({ navigation }: any) => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal} />}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={s.pageTitle}>Your reading, measured</Text>
+        <Text style={s.pageTitle}>{t('statistics.pageTitle')}</Text>
 
         {loading ? (
           <ActivityIndicator color={colors.teal} style={{ marginTop: 40 }} />
         ) : (
           <>
             <View style={s.metricsRow}>
-              <Metric label="Checks run" value={String(total)} colors={colors} />
-              <Metric label="Average score" value={total ? String(Math.round(avgScore)) : '—'} colors={colors} />
-              <Metric label="Sources" value={String(sources)} colors={colors} />
+              <Metric label={t('statistics.checksRun')} value={String(total)} colors={colors} />
+              <Metric label={t('statistics.averageScore')} value={total ? String(Math.round(avgScore)) : '—'} colors={colors} />
+              <Metric label={t('statistics.sources')} value={String(sources)} colors={colors} />
             </View>
 
             <View style={s.card}>
-              <Text style={s.sectionTitle}>How your checks rated</Text>
+              <Text style={s.sectionTitle}>{t('statistics.ratedSectionTitle')}</Text>
               {total === 0 ? (
-                <Text style={s.muted}>Run a few checks and your distribution will appear here.</Text>
+                <Text style={s.muted}>{t('statistics.emptyDistribution')}</Text>
               ) : (
                 VERDICTS.map((v) => (
                   <BreakdownBar
@@ -88,21 +90,20 @@ const StatisticsScreen = ({ navigation }: any) => {
               onPress={() => navigation.navigate('SourceDatabase')}
             >
               <View>
-                <Text style={s.sectionTitle}>Sources you have checked</Text>
-                <Text style={s.muted}>Average scores per outlet</Text>
+                <Text style={s.sectionTitle}>{t('statistics.sourcesCheckedTitle')}</Text>
+                <Text style={s.muted}>{t('statistics.sourcesCheckedSubtitle')}</Text>
               </View>
               <Text style={{ color: colors.teal, fontSize: 18 }}>›</Text>
             </TouchableOpacity>
 
             {!isPremium && (
               <View style={[s.card, { alignItems: 'center' }]}>
-                <Text style={s.sectionTitle}>NewsCred Premium</Text>
+                <Text style={s.sectionTitle}>{t('statistics.premiumTitle')}</Text>
                 <Text style={[s.muted, { textAlign: 'center', marginBottom: 12 }]}>
-                  Unlimited checks, the full forensic report with live fact-check
-                  sources, and higher limits.{plan ? ` ${plan}/month.` : ''}
+                  {plan ? t('statistics.premiumDescWithPlan', { plan }) : t('statistics.premiumDesc')}
                 </Text>
                 <TouchableOpacity style={s.primaryBtn} onPress={() => navigation.navigate('Payment')} activeOpacity={0.85}>
-                  <Text style={s.primaryBtnText}>Upgrade with Paystack</Text>
+                  <Text style={s.primaryBtnText}>{t('statistics.upgradeButton')}</Text>
                 </TouchableOpacity>
               </View>
             )}

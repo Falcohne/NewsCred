@@ -13,6 +13,8 @@ import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import SourceDatabaseScreen from '../screens/SourceDatabaseScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import HowWeScoreScreen from '../screens/HowWeScoreScreen'; // 👈 ADD THIS IMPORT
+import ImageScannerScreen from '../screens/ImageScannerScreen';
+import AudioScannerScreen from '../screens/AudioScannerScreen';
 import BottomTabNavigator from './BottomTabNavigator';
 
 const Stack = createStackNavigator();
@@ -122,6 +124,20 @@ const AppNavigator = () => {
             ),
             headerRight: () => null,
           })}
+        />
+
+        {/* Image Scanner */}
+        <Stack.Screen
+          name="ImageScanner"
+          component={ImageScannerScreen}
+          options={{ headerShown: false }}
+        />
+
+        {/* Audio Scanner */}
+        <Stack.Screen
+          name="AudioScanner"
+          component={AudioScannerScreen}
+          options={{ headerShown: false }}
         />
 
         {/* Article WebView */}

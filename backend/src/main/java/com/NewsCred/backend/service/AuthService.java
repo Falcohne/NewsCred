@@ -88,8 +88,8 @@ public class AuthService {
 
         user = userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getEmail());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+        String token = jwtUtil.generateToken(user.getEmail(), user.getTokenVersion());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail(), user.getTokenVersion());
 
         return new AuthResponse(
             token,
@@ -129,8 +129,8 @@ public class AuthService {
 
         adminAccessService.syncAdminStatus(user);
 
-        String token = jwtUtil.generateToken(user.getEmail());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+        String token = jwtUtil.generateToken(user.getEmail(), user.getTokenVersion());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail(), user.getTokenVersion());
 
         return new AuthResponse(
             token,
@@ -157,8 +157,12 @@ public class AuthService {
         User user = userRepository.findByEmail(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String newToken = jwtUtil.generateToken(user.getEmail());
-        String newRefreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+        if (jwtUtil.extractTokenVersion(refreshToken) != user.getTokenVersion()) {
+            throw new RuntimeException("Refresh token has been revoked. Please log in again.");
+        }
+
+        String newToken = jwtUtil.generateToken(user.getEmail(), user.getTokenVersion());
+        String newRefreshToken = jwtUtil.generateRefreshToken(user.getEmail(), user.getTokenVersion());
 
         return new AuthResponse(
             newToken,
@@ -193,6 +197,21 @@ public class AuthService {
 
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setUpdatedAt(LocalDateTime.now());
+        // Changing the password invalidates every previously issued token
+        // (including on other devices), so a leaked token can't outlive it.
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        userRepository.save(user);
+    }
+
+    /**
+     * Invalidates every access/refresh token issued to this user so far,
+     * on every device, by bumping the version embedded in their claims.
+     */
+    @Transactional
+    public void logoutEverywhere(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
     }
 

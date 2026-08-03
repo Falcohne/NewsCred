@@ -44,29 +44,26 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf().disable()
+            .csrf(csrf -> csrf.disable())
 
-            .cors().configurationSource(corsConfigurationSource())
-            .and()
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-            .headers()
-                .frameOptions().deny()
-                .and()
+            .headers(headers -> headers
+                .frameOptions(frameOptions -> frameOptions.deny()))
 
-            .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            .authorizeRequests()
-                .antMatchers("/api/auth/**", "/api/auth/register", "/api/auth/login").permitAll()
-                .antMatchers("/test/**", "/actuator/health", "/actuator/info").permitAll()
-                .antMatchers("/api/verify/email/**").permitAll()
-                .antMatchers("/api/users/**").authenticated()
-                .antMatchers("/api/articles/analyze").authenticated()
-                .antMatchers("/api/articles/user/**").authenticated()
-                .antMatchers("/api/articles/**").authenticated()
-                .anyRequest().authenticated()
-            .and()
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/logout-all").authenticated()
+                .requestMatchers("/api/auth/**", "/api/auth/register", "/api/auth/login").permitAll()
+                .requestMatchers("/test/**", "/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/api/verify/email/**").permitAll()
+                .requestMatchers("/api/users/**").authenticated()
+                .requestMatchers("/api/articles/analyze").authenticated()
+                .requestMatchers("/api/articles/user/**").authenticated()
+                .requestMatchers("/api/articles/**").authenticated()
+                .anyRequest().authenticated())
 
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(rateLimitingFilter, JwtAuthenticationFilter.class);

@@ -1,5 +1,6 @@
 import { registerRootComponent } from 'expo';
 import React from 'react';
+import './src/i18n';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -15,11 +16,7 @@ const AppWrapper = () => {
   
   return (
     <>
-      <StatusBar 
-        style={darkMode ? 'light' : 'dark'} 
-        backgroundColor={darkMode ? '#10141C' : '#FAF7F0'}
-        translucent={false}
-      />
+      <StatusBar style={darkMode ? 'light' : 'dark'} />
       <PaperProvider theme={paperTheme}>
         <SafeAreaProvider>
           <AppNavigator />

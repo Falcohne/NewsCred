@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { IconButton } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import CustomAlert from '../components/CustomAlert';
 import { Image } from 'react-native';
@@ -18,6 +19,7 @@ const FREE_LIMIT = 3;
 
 const DashboardScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const s = styles(colors);
 
   const [userName, setUserName] = useState('');
@@ -80,20 +82,20 @@ const DashboardScreen = ({ navigation }: any) => {
 
   const greeting = () => {
     const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return t('dashboard.goodMorning');
+    if (h < 17) return t('dashboard.goodAfternoon');
+    return t('dashboard.goodEvening');
   };
 
   const analyze = async () => {
     const hasUrl = url.trim().length > 0;
     const hasText = content.trim().length > 0;
     if (!hasUrl && !hasText) {
-      showAlert('Nothing to check', 'Paste an article link or the article text.');
+      showAlert(t('dashboard.nothingToCheckTitle'), t('dashboard.nothingToCheckMessage'));
       return;
     }
     if (hasText && content.trim().length < 50) {
-      showAlert('Text too short', 'Paste at least 50 characters so the analysis has something to work with.');
+      showAlert(t('dashboard.textTooShortTitle'), t('dashboard.textTooShortMessage'));
       return;
     }
     setLoading(true);
@@ -106,25 +108,27 @@ const DashboardScreen = ({ navigation }: any) => {
       setContent('');
       loadUser();
       loadHistory();
-      notifyAnalysisComplete(
-        res.data?.title || 'Untitled article',
-        res.data?.overallScore ?? 0,
-        res.data?.credibilityVerdict || 'UNRATED'
-      );
+      try {
+        notifyAnalysisComplete(
+          res.data?.title || t('dashboard.untitledArticle'),
+          res.data?.overallScore ?? 0,
+          res.data?.credibilityVerdict || 'UNRATED'
+        );
+      } catch {}
       navigation.navigate('AnalysisDetail', { result: res.data });
     } catch (error: any) {
       if (error.response?.status === 402) {
         showAlert(
-          'Free checks used up',
+          t('dashboard.freeChecksUsedUpTitle'),
           error.response?.data?.message ||
-            `You have used all ${FREE_LIMIT} free checks. Premium gives you unlimited checks and the full report.`,
+            t('dashboard.freeChecksUsedUpFallback', { limit: FREE_LIMIT }),
           [
-            { text: 'Not now', style: 'cancel' },
-            { text: 'See Premium', onPress: () => navigation.navigate('Payment') },
+            { text: t('dashboard.notNow'), style: 'cancel' },
+            { text: t('dashboard.seePremium'), onPress: () => navigation.navigate('Payment') },
           ]
         );
       } else {
-        showAlert('Check failed', error.response?.data?.message || 'Something went wrong. Try again.');
+        showAlert(t('dashboard.checkFailedTitle'), error.response?.data?.message || t('dashboard.checkFailedMessage'));
       }
     } finally {
       setLoading(false);
@@ -150,7 +154,7 @@ const DashboardScreen = ({ navigation }: any) => {
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {isPremium && (
               <View style={s.premiumBadge}>
-                <Text style={s.premiumBadgeText}>Premium</Text>
+                <Text style={s.premiumBadgeText}>{t('dashboard.premiumBadge')}</Text>
               </View>
             )}
             <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.8}>
@@ -164,7 +168,7 @@ const DashboardScreen = ({ navigation }: any) => {
         </View>
 
         <Text style={s.greetSmall}>{greeting()}, {userName}</Text>
-        <Text style={s.greetBig}>Verify before you share</Text>
+        <Text style={s.greetBig}>{t('dashboard.verifyBeforeShare')}</Text>
 
         {/* Analyze card */}
         <View style={s.card}>
@@ -172,7 +176,7 @@ const DashboardScreen = ({ navigation }: any) => {
             <IconButton icon="link-variant" size={18} iconColor={colors.hint} style={s.inputIcon} />
             <TextInput
               style={s.input}
-              placeholder="Paste article link"
+              placeholder={t('dashboard.urlPlaceholder')}
               placeholderTextColor={colors.hint}
               value={url}
               onChangeText={setUrl}
@@ -184,7 +188,7 @@ const DashboardScreen = ({ navigation }: any) => {
             <IconButton icon="text" size={18} iconColor={colors.hint} style={s.inputIcon} />
             <TextInput
               style={[s.input, { minHeight: 72, textAlignVertical: 'top', paddingTop: 12 }]}
-              placeholder="Or paste article text"
+              placeholder={t('dashboard.textPlaceholder')}
               placeholderTextColor={colors.hint}
               value={content}
               onChangeText={setContent}
@@ -194,15 +198,35 @@ const DashboardScreen = ({ navigation }: any) => {
           <TouchableOpacity style={s.primaryBtn} onPress={analyze} disabled={loading} activeOpacity={0.85}>
             {loading
               ? <ActivityIndicator color={colors.onTeal} />
-              : <Text style={s.primaryBtnText}>Check credibility</Text>}
+              : <Text style={s.primaryBtnText}>{t('dashboard.checkCredibility')}</Text>}
           </TouchableOpacity>
           {!isPremium && (
             <Text style={s.quotaText}>
               {remaining > 0
-                ? `${remaining} free check${remaining === 1 ? '' : 's'} left`
-                : 'Free checks used — Premium is unlimited'}
+                ? t('dashboard.freeChecksLeft', { count: remaining })
+                : t('dashboard.freeChecksUsedUp')}
             </Text>
           )}
+        </View>
+
+        {/* More ways to check */}
+        <View style={s.quickRow}>
+          <TouchableOpacity
+            style={s.quickCard}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('ImageScanner')}
+          >
+            <IconButton icon="image-outline" size={22} iconColor={colors.teal} style={{ margin: 0 }} />
+            <Text style={s.quickCardText}>{t('imageScanner.title')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={s.quickCard}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('AudioScanner')}
+          >
+            <IconButton icon="microphone-outline" size={22} iconColor={colors.teal} style={{ margin: 0 }} />
+            <Text style={s.quickCardText}>{t('audioScanner.title')}</Text>
+          </TouchableOpacity>
         </View>
 
         {/* News discovery */}
@@ -212,20 +236,18 @@ const DashboardScreen = ({ navigation }: any) => {
           onPress={() => navigation.navigate('News')}
         >
           <View style={{ flex: 1 }}>
-            <Text style={s.newsCardTitle}>Trending right now</Text>
-            <Text style={s.newsCardBody}>
-              Browse today's top stories and check any headline in one tap.
-            </Text>
+            <Text style={s.newsCardTitle}>{t('dashboard.trendingNow')}</Text>
+            <Text style={s.newsCardBody}>{t('dashboard.trendingBody')}</Text>
           </View>
           <Text style={s.newsCardArrow}>›</Text>
         </TouchableOpacity>
 
         {/* Recent checks */}
         <View style={s.sectionHead}>
-          <Text style={s.sectionTitle}>Recent checks</Text>
+          <Text style={s.sectionTitle}>{t('dashboard.recentChecks')}</Text>
           {history.length > 3 && (
             <TouchableOpacity onPress={() => navigation.navigate('History')}>
-              <Text style={s.link}>View all</Text>
+              <Text style={s.link}>{t('dashboard.viewAll')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -234,10 +256,8 @@ const DashboardScreen = ({ navigation }: any) => {
           <ActivityIndicator color={colors.teal} style={{ marginTop: 16 }} />
         ) : history.length === 0 ? (
           <View style={[s.card, { alignItems: 'center', paddingVertical: 28 }]}>
-            <Text style={s.emptyTitle}>Run your first check</Text>
-            <Text style={s.emptyBody}>
-              Paste a link or article text above and NewsCred will score its credibility.
-            </Text>
+            <Text style={s.emptyTitle}>{t('dashboard.emptyTitle')}</Text>
+            <Text style={s.emptyBody}>{t('dashboard.emptyBody')}</Text>
           </View>
         ) : (
           history.slice(0, 5).map((item) => (
@@ -249,9 +269,9 @@ const DashboardScreen = ({ navigation }: any) => {
             >
               <ScoreCircle score={Math.round(item.overallScore ?? 0)} />
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={s.historyTitle} numberOfLines={1}>{item.title || 'Untitled article'}</Text>
+                <Text style={s.historyTitle} numberOfLines={1}>{item.title || t('dashboard.untitledArticle')}</Text>
                 <Text style={s.historyMeta} numberOfLines={1}>
-                  {(item.sourceName || 'Pasted text')} · {verdictLabel(item.credibilityVerdict)}
+                  {(item.sourceName || t('dashboard.pastedText'))} · {verdictLabel(item.credibilityVerdict)}
                 </Text>
               </View>
               <IconButton icon="chevron-right" size={18} iconColor={colors.hint} style={{ margin: 0 }} />
@@ -302,6 +322,12 @@ const styles = (c: any) => StyleSheet.create({
   },
   primaryBtnText: { color: c.onTeal, fontSize: 15, fontWeight: '700' },
   quotaText: { fontSize: 12, color: c.inkMuted, textAlign: 'center', marginTop: 10 },
+  quickRow: { flexDirection: 'row', gap: 10, marginBottom: 18 },
+  quickCard: {
+    flex: 1, backgroundColor: c.card, borderWidth: 1, borderColor: c.line,
+    borderRadius: 16, paddingVertical: 14, alignItems: 'center',
+  },
+  quickCardText: { fontSize: 12.5, fontWeight: '600', color: c.ink, marginTop: 2 },
   newsCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: c.tealSoft, borderRadius: 18,

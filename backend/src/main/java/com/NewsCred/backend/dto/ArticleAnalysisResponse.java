@@ -15,6 +15,7 @@ public class ArticleAnalysisResponse {
     private String credibilityVerdict;
     private String analysisSummary;
     private String contentSummary;
+    private String detectedLanguage;
     private String factCheckDetails;
     private String sourceReliability;
     private String contentQuality;
@@ -48,6 +49,7 @@ public class ArticleAnalysisResponse {
         response.setCredibilityVerdict(article.getCredibilityVerdict());
         response.setAnalysisSummary(article.getAnalysisSummary());
         response.setContentSummary(article.getContentSummary());
+        response.setDetectedLanguage(article.getDetectedLanguage());
         response.setFactCheckDetails(article.getFactCheckDetails());
         response.setSourceReliability(article.getSourceReliability());
         response.setContentQuality(article.getContentQuality());
@@ -90,6 +92,9 @@ public class ArticleAnalysisResponse {
     public void setAnalysisSummary(String analysisSummary) { this.analysisSummary = analysisSummary; }
     public String getContentSummary() { return contentSummary; }
     public void setContentSummary(String contentSummary) { this.contentSummary = contentSummary; }
+
+    public String getDetectedLanguage() { return detectedLanguage; }
+    public void setDetectedLanguage(String detectedLanguage) { this.detectedLanguage = detectedLanguage; }
     public String getSourceReliability() { return sourceReliability; }
     public void setSourceReliability(String sourceReliability) { this.sourceReliability = sourceReliability; }
     public String getContentQuality() { return contentQuality; }

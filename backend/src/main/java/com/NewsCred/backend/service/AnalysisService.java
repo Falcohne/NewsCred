@@ -21,6 +21,7 @@ public class AnalysisService {
     private final ImageVerificationService imageVerificationService;
     private final GoogleFactCheckService googleFactCheckService;
     private final FactCheckApiService factCheckApiService;
+    private final TranslationService translationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Weights: live/heuristic fact-checking carries the most weight now
@@ -38,7 +39,8 @@ public class AnalysisService {
                            AuthorCredibilityService authorCredibilityService,
                            ImageVerificationService imageVerificationService,
                            GoogleFactCheckService googleFactCheckService,
-                           FactCheckApiService factCheckApiService) {
+                           FactCheckApiService factCheckApiService,
+                           TranslationService translationService) {
         this.articleRepository = articleRepository;
         this.factCheckService = factCheckService;
         this.summarizationService = summarizationService;
@@ -47,10 +49,31 @@ public class AnalysisService {
         this.imageVerificationService = imageVerificationService;
         this.googleFactCheckService = googleFactCheckService;
         this.factCheckApiService = factCheckApiService;
+        this.translationService = translationService;
     }
 
     @Transactional
     public Article analyzeArticle(Article article) {
+        // LANGUAGE: the linguistic heuristics below are English-keyword
+        // based, so non-English content is translated to English first.
+        // One call both detects the source language and translates it -
+        // that's why this doubles as the language-detection signal too.
+        TranslationService.TranslationResult translation =
+            translationService.translateToEnglish(article.getContent());
+        if (translation.isAttempted() && translation.isAvailable()
+                && translation.getDetectedLanguage() != null
+                && !translation.getDetectedLanguage().equalsIgnoreCase("en")
+                && translation.getTranslatedText() != null) {
+            article.setDetectedLanguage(translation.getDetectedLanguage());
+            article.setContent(translation.getTranslatedText());
+
+            TranslationService.TranslationResult titleTranslation =
+                translationService.translateToEnglish(article.getTitle());
+            if (titleTranslation.isAvailable() && titleTranslation.getTranslatedText() != null) {
+                article.setTitle(titleTranslation.getTranslatedText());
+            }
+        }
+
         String contentSummary = summarizationService.summarize(article.getContent());
         article.setContentSummary(contentSummary);
 
@@ -175,8 +198,9 @@ public class AnalysisService {
         article.setCredibilityVerdict(verdict);
 
         String analysisSummary = generateSummaryWithAllVerifications(
-            verdict, overallScore, sourceReliability, factCheckResult, 
-            contentSummary, dateResult, authorResult, imageResult, externalResult
+            verdict, overallScore, sourceReliability, factCheckResult,
+            contentSummary, dateResult, authorResult, imageResult, externalResult,
+            article.getDetectedLanguage()
         );
         article.setAnalysisSummary(analysisSummary);
 
@@ -294,11 +318,16 @@ public class AnalysisService {
                                                  DateVerificationResult dateResult,
                                                  AuthorCredibilityService.AuthorCredibilityResult authorResult,
                                                  ImageVerificationService.ImageVerificationResult imageResult,
-                                                 ExternalFactCheckResult externalResult) {
+                                                 ExternalFactCheckResult externalResult,
+                                                 String detectedLanguage) {
         StringBuilder summary = new StringBuilder();
         summary.append("ARTICLE SUMMARY\n\n");
+        if (detectedLanguage != null && !detectedLanguage.equalsIgnoreCase("en")) {
+            summary.append("(Translated from ").append(detectedLanguage.toUpperCase())
+                   .append(" to English before analysis.)\n\n");
+        }
         summary.append(contentSummary).append("\n\n");
-        
+
         summary.append("CREDIBILITY ANALYSIS\n\n");
         summary.append("Based on 6 linguistic credibility indicators, live fact-check ");
         summary.append("database verification, date verification, author transparency check, ");

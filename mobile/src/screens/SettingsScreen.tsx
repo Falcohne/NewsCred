@@ -8,15 +8,18 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { enableNotifications, disableNotifications, isExpoGo } from '../services/notifications';
 import api from '../services/api';
 import CustomAlert from '../components/CustomAlert';
 import { useTheme, displayFont } from '../context/ThemeContext';
+import { SUPPORTED_LANGUAGES, changeAppLanguage, LanguageCode } from '../i18n';
 
 type Panel = 'none' | 'name' | 'password' | 'delete';
 
 const SettingsScreen = ({ navigation }: any) => {
   const { colors, darkMode, toggleDarkMode } = useTheme();
+  const { t, i18n } = useTranslation();
   const s = styles(colors);
 
   const [userId, setUserId] = useState('');
@@ -60,7 +63,7 @@ const SettingsScreen = ({ navigation }: any) => {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        setAlert({ title: 'Permission needed', message: 'Allow photo access to set a profile picture.' });
+        setAlert({ title: t('settings.permissionNeededTitle'), message: t('settings.photoPermissionMessage') });
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -75,7 +78,7 @@ const SettingsScreen = ({ navigation }: any) => {
         setProfileImage(uri);
       }
     } catch {
-      setAlert({ title: 'Photo failed', message: 'Could not open your photos. Try again.' });
+      setAlert({ title: t('settings.photoFailedTitle'), message: t('settings.photoFailedMessage') });
     }
   };
 
@@ -85,10 +88,10 @@ const SettingsScreen = ({ navigation }: any) => {
       setNotifs(granted);
       if (!granted) {
         setAlert({
-          title: isExpoGo ? 'Not available in Expo Go' : 'Permission needed',
+          title: isExpoGo ? t('settings.notAvailableInExpoGoTitle') : t('settings.permissionNeededTitle'),
           message: isExpoGo
-            ? 'Notifications work in the installed NewsCred app, not the Expo Go preview. They will activate automatically once the app is built.'
-            : 'Allow notifications in your phone settings to enable this.',
+            ? t('settings.expoGoNotificationsMessage')
+            : t('settings.notificationsPermissionMessage'),
         });
       }
     } else {
@@ -106,15 +109,15 @@ const SettingsScreen = ({ navigation }: any) => {
       setName(newName.trim());
       setPanel('none');
       setNewName('');
-      setAlert({ title: 'Saved', message: 'Your name was updated.' });
+      setAlert({ title: t('settings.savedTitle'), message: t('settings.nameUpdatedMessage') });
     } catch (e: any) {
-      setAlert({ title: 'Update failed', message: e.response?.data?.message || 'Could not update your name.' });
+      setAlert({ title: t('settings.updateFailedTitle'), message: e.response?.data?.message || t('settings.updateFailedMessage') });
     } finally { setBusy(false); }
   };
 
   const savePassword = async () => {
     if (!currentPassword || !newPassword) {
-      setAlert({ title: 'Missing details', message: 'Enter your current and new password.' });
+      setAlert({ title: t('settings.missingDetailsTitle'), message: t('settings.missingPasswordDetails') });
       return;
     }
     setBusy(true);
@@ -123,20 +126,20 @@ const SettingsScreen = ({ navigation }: any) => {
       setPanel('none');
       setCurrentPassword('');
       setNewPassword('');
-      setAlert({ title: 'Password changed', message: 'Use the new password next time you sign in.' });
+      setAlert({ title: t('settings.passwordChangedTitle'), message: t('settings.passwordChangedMessage') });
     } catch (e: any) {
-      setAlert({ title: 'Change failed', message: e.response?.data?.message || 'Could not change the password.' });
+      setAlert({ title: t('settings.changeFailedTitle'), message: e.response?.data?.message || t('settings.changeFailedMessage') });
     } finally { setBusy(false); }
   };
 
   const signOut = () => {
     setAlert({
-      title: 'Sign out?',
-      message: 'You can sign back in any time.',
+      title: t('settings.signOutTitle'),
+      message: t('settings.signOutMessage'),
       buttons: [
-        { text: 'Stay', style: 'cancel' },
+        { text: t('settings.stay'), style: 'cancel' },
         {
-          text: 'Sign out',
+          text: t('settings.signOutAction'),
           onPress: async () => {
             await AsyncStorage.multiRemove([
               'token', 'refreshToken', 'userId', 'userName', 'userEmail', 'isPremium', 'analysisCount',
@@ -150,7 +153,7 @@ const SettingsScreen = ({ navigation }: any) => {
 
   const deleteAccount = async () => {
     if (!deletePassword) {
-      setAlert({ title: 'Password needed', message: 'Enter your password to confirm deletion.' });
+      setAlert({ title: t('settings.passwordNeededTitle'), message: t('settings.passwordNeededMessage') });
       return;
     }
     setBusy(true);
@@ -161,7 +164,7 @@ const SettingsScreen = ({ navigation }: any) => {
       await AsyncStorage.clear();
       navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
     } catch (e: any) {
-      setAlert({ title: 'Deletion failed', message: e.response?.data?.message || 'Could not delete the account.' });
+      setAlert({ title: t('settings.deletionFailedTitle'), message: e.response?.data?.message || t('settings.deletionFailedMessage') });
     } finally { setBusy(false); }
   };
 
@@ -170,7 +173,7 @@ const SettingsScreen = ({ navigation }: any) => {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <Text style={s.pageTitle}>Settings</Text>
+        <Text style={s.pageTitle}>{t('settings.pageTitle')}</Text>
 
         {/* Profile */}
         <View style={s.card}>
@@ -181,33 +184,30 @@ const SettingsScreen = ({ navigation }: any) => {
               ) : (
                 <View style={s.avatar}><Text style={s.avatarText}>{initials}</Text></View>
               )}
-              <View style={s.avatarEdit}><Text style={{ fontSize: 9, color: colors.onTeal, fontWeight: '700' }}>Edit</Text></View>
+              <View style={s.avatarEdit}><Text style={{ fontSize: 9, color: colors.onTeal, fontWeight: '700' }}>{t('settings.editPhoto')}</Text></View>
             </TouchableOpacity>
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={s.name}>{name || 'Your name'}</Text>
+              <Text style={s.name}>{name || t('settings.yourName')}</Text>
               <Text style={s.email}>{email}</Text>
             </View>
             <View style={[s.tierBadge, { backgroundColor: isPremium ? colors.tealSoft : colors.line }]}>
               <Text style={{ fontSize: 11, fontWeight: '700', color: isPremium ? colors.teal : colors.inkMuted }}>
-                {isPremium ? 'Premium' : 'Free'}
+                {isPremium ? t('settings.premiumTier') : t('settings.freeTier')}
               </Text>
             </View>
           </View>
         </View>
 
         {/* Membership */}
-        <Text style={s.groupLabel}>Membership</Text>
+        <Text style={s.groupLabel}>{t('settings.membershipGroup')}</Text>
         <View style={s.card}>
           {isPremium ? (
-            <Text style={s.rowNote}>
-              You are on NewsCred Premium: unlimited checks and full forensic reports.
-              For billing questions, contact support.
-            </Text>
+            <Text style={s.rowNote}>{t('settings.premiumStatusNote')}</Text>
           ) : (
             <Row
-              label="Upgrade to Premium"
-              note="Unlimited checks, full reports, live fact-check sources"
-              action="Upgrade"
+              label={t('settings.upgradeLabel')}
+              note={t('settings.upgradeNote')}
+              action={t('settings.upgradeAction')}
               onPress={() => navigation.navigate('Payment')}
               colors={colors}
             />
@@ -215,12 +215,12 @@ const SettingsScreen = ({ navigation }: any) => {
         </View>
 
         {/* Appearance */}
-        <Text style={s.groupLabel}>Appearance</Text>
+        <Text style={s.groupLabel}>{t('settings.appearanceGroup')}</Text>
         <View style={s.card}>
           <View style={s.rowBetween}>
             <View>
-              <Text style={s.rowLabel}>Dark mode</Text>
-              <Text style={s.rowNote}>Ink-on-navy reading theme</Text>
+              <Text style={s.rowLabel}>{t('settings.darkModeLabel')}</Text>
+              <Text style={s.rowNote}>{t('settings.darkModeNote')}</Text>
             </View>
             <Switch
               value={darkMode}
@@ -232,8 +232,8 @@ const SettingsScreen = ({ navigation }: any) => {
           <View style={s.divider} />
           <View style={s.rowBetween}>
             <View>
-              <Text style={s.rowLabel}>Notifications</Text>
-              <Text style={s.rowNote}>Get notified when a check completes</Text>
+              <Text style={s.rowLabel}>{t('settings.notificationsLabel')}</Text>
+              <Text style={s.rowNote}>{t('settings.notificationsNote')}</Text>
             </View>
             <Switch
               value={notifs}
@@ -244,92 +244,112 @@ const SettingsScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        {/* Account */}
-        <Text style={s.groupLabel}>Account</Text>
+        {/* Language */}
+        <Text style={s.groupLabel}>{t('settings.languageGroup')}</Text>
         <View style={s.card}>
-          <Row label="Change display name" action={panel === 'name' ? 'Close' : 'Edit'}
+          <Text style={s.rowLabel}>{t('settings.languageLabel')}</Text>
+          <Text style={s.rowNote}>{t('settings.languageNote')}</Text>
+          <View style={s.languageRow}>
+            {SUPPORTED_LANGUAGES.map((lang) => {
+              const active = i18n.language === lang.code;
+              return (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={[s.languagePill, active && s.languagePillActive]}
+                  onPress={() => changeAppLanguage(lang.code as LanguageCode)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[s.languagePillText, active && s.languagePillTextActive]}>{lang.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Account */}
+        <Text style={s.groupLabel}>{t('settings.accountGroup')}</Text>
+        <View style={s.card}>
+          <Row label={t('settings.changeNameLabel')} action={panel === 'name' ? t('common.close') : t('common.edit')}
             onPress={() => setPanel(panel === 'name' ? 'none' : 'name')} colors={colors} />
           {panel === 'name' && (
             <View style={s.panel}>
-              <TextInput style={s.input} placeholder={name || 'New name'} placeholderTextColor={colors.hint}
+              <TextInput style={s.input} placeholder={name || t('settings.newNamePlaceholder')} placeholderTextColor={colors.hint}
                 value={newName} onChangeText={setNewName} />
-              <PrimaryButton label="Save name" onPress={saveName} busy={busy} colors={colors} />
+              <PrimaryButton label={t('settings.saveName')} onPress={saveName} busy={busy} colors={colors} />
             </View>
           )}
 
           <View style={s.divider} />
 
-          <Row label="Change password" action={panel === 'password' ? 'Close' : 'Edit'}
+          <Row label={t('settings.changePasswordLabel')} action={panel === 'password' ? t('common.close') : t('common.edit')}
             onPress={() => setPanel(panel === 'password' ? 'none' : 'password')} colors={colors} />
           {panel === 'password' && (
             <View style={s.panel}>
-              <TextInput style={s.input} placeholder="Current password" placeholderTextColor={colors.hint}
+              <TextInput style={s.input} placeholder={t('settings.currentPasswordPlaceholder')} placeholderTextColor={colors.hint}
                 value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry />
-              <TextInput style={s.input} placeholder="New password" placeholderTextColor={colors.hint}
+              <TextInput style={s.input} placeholder={t('settings.newPasswordPlaceholder')} placeholderTextColor={colors.hint}
                 value={newPassword} onChangeText={setNewPassword} secureTextEntry />
-              <PrimaryButton label="Change password" onPress={savePassword} busy={busy} colors={colors} />
+              <PrimaryButton label={t('settings.changePasswordAction')} onPress={savePassword} busy={busy} colors={colors} />
             </View>
           )}
         </View>
 
         {/* Help */}
-        <Text style={s.groupLabel}>Help</Text>
+        <Text style={s.groupLabel}>{t('settings.helpGroup')}</Text>
         <View style={s.card}>
           <Row
-            label="How we score"
-            note="See exactly how scores and verdicts are calculated"
-            action="View"
+            label={t('settings.howWeScoreLabel')}
+            note={t('settings.howWeScoreNote')}
+            action={t('common.view')}
             onPress={() => navigation.navigate('HowWeScore')}
             colors={colors}
           />
           <View style={s.divider} />
           <Row
-            label="Replay welcome tour"
-            note="See the quick intro to NewsCred again"
-            action="Replay"
+            label={t('settings.replayTourLabel')}
+            note={t('settings.replayTourNote')}
+            action={t('settings.replay')}
             onPress={() => navigation.navigate('Onboarding')}
             colors={colors}
           />
         </View>
 
         {/* Session */}
-        <Text style={s.groupLabel}>Session</Text>
+        <Text style={s.groupLabel}>{t('settings.sessionGroup')}</Text>
         <View style={s.card}>
-          <Row label="Sign out" action="Sign out" onPress={signOut} colors={colors} />
+          <Row label={t('settings.signOutLabel')} action={t('settings.signOutAction')} onPress={signOut} colors={colors} />
           <View style={s.divider} />
           <Row
-            label="Delete account"
-            note="Removes your account and all saved checks"
-            action={panel === 'delete' ? 'Close' : 'Delete'}
+            label={t('settings.deleteAccountLabel')}
+            note={t('settings.deleteAccountNote')}
+            action={panel === 'delete' ? t('common.close') : t('settings.delete')}
             danger
             onPress={() => setPanel(panel === 'delete' ? 'none' : 'delete')}
             colors={colors}
           />
           {panel === 'delete' && (
             <View style={s.panel}>
-              <Text style={[s.rowNote, { marginBottom: 8 }]}>
-                This cannot be undone. Enter your password to confirm.
-              </Text>
-              <TextInput style={s.input} placeholder="Your password" placeholderTextColor={colors.hint}
+              <Text style={[s.rowNote, { marginBottom: 8 }]}>{t('settings.deleteAccountWarning')}</Text>
+              <TextInput style={s.input} placeholder={t('settings.deletePasswordPlaceholder')} placeholderTextColor={colors.hint}
                 value={deletePassword} onChangeText={setDeletePassword} secureTextEntry />
               <TouchableOpacity
                 style={[s.primaryBtn, { backgroundColor: colors.bad }]}
                 onPress={deleteAccount} disabled={busy} activeOpacity={0.85}
               >
                 {busy ? <ActivityIndicator color="#FFFFFF" /> :
-                  <Text style={[s.primaryBtnText, { color: '#FFFFFF' }]}>Delete my account</Text>}
+                  <Text style={[s.primaryBtnText, { color: '#FFFFFF' }]}>{t('settings.deleteMyAccount')}</Text>}
               </TouchableOpacity>
             </View>
           )}
         </View>
 
-        <Text style={s.footer}>NewsCred · Intelligent news credibility assessment</Text>
+        <Text style={s.footer}>{t('settings.footer')}</Text>
         <View style={{ height: 24 }} />
       </ScrollView>
 
       {alert && (
         <CustomAlert visible title={alert.title} message={alert.message}
-          buttons={alert.buttons || [{ text: 'OK' }]} onClose={() => setAlert(null)} />
+          buttons={alert.buttons || [{ text: t('common.ok') }]} onClose={() => setAlert(null)} />
       )}
     </SafeAreaView>
   );
@@ -375,6 +395,14 @@ const styles = (c: any) => StyleSheet.create({
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   rowLabel: { fontSize: 14, fontWeight: '600', color: c.ink },
   rowNote: { fontSize: 12, color: c.inkMuted, marginTop: 2, lineHeight: 18 },
+  languageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  languagePill: {
+    borderWidth: 1, borderColor: c.line, borderRadius: 20,
+    paddingVertical: 8, paddingHorizontal: 16, backgroundColor: c.paper,
+  },
+  languagePillActive: { backgroundColor: c.tealSoft, borderColor: c.teal },
+  languagePillText: { fontSize: 13, fontWeight: '600', color: c.inkMuted },
+  languagePillTextActive: { color: c.teal },
   divider: { height: 1, backgroundColor: c.line, marginVertical: 14 },
   panel: { marginTop: 12 },
   input: {

@@ -31,7 +31,10 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sharing"
+      "expo-sharing",
+      "expo-localization",
+      "expo-audio",
+      "expo-image-picker"
     ],
     "extra": {
       "eas": {

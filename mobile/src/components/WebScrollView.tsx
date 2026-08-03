@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Platform, ViewStyle } from 'react-native';
+import { View, Platform, ViewStyle } from 'react-native';
 
 interface WebScrollViewProps {
   children: React.ReactNode;
@@ -21,13 +21,16 @@ const WebScrollView = ({ children, style }: WebScrollViewProps) => {
   return <View style={style}>{children}</View>;
 };
 
-const styles = StyleSheet.create({
+// This is a web-only <div> style bag (CSS properties like 100vh/overflowY
+// have no RN ViewStyle equivalent), so it's typed as `any` rather than run
+// through RN's StyleSheet.create, which only accepts ViewStyle/TextStyle/ImageStyle.
+const styles: { webScroll: any } = {
   webScroll: {
     height: '100vh',
-    overflowY: 'auto' as any,
-    overflowX: 'hidden' as any,
+    overflowY: 'auto',
+    overflowX: 'hidden',
     backgroundColor: '#f5f5f5',
   },
-});
+};
 
 export default WebScrollView;

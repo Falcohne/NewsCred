@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,22 +97,7 @@ public class ArticleController {
                 // the deep forensic breakdown is a premium feature.
                 if (!currentUser.isPremium()
                         && result.getBody() instanceof ArticleAnalysisResponse) {
-                    ArticleAnalysisResponse resp = (ArticleAnalysisResponse) result.getBody();
-                    resp.setDateStatus(null);
-                    resp.setDateScore(null);
-                    resp.setDateMessage("Upgrade to Premium to see date verification details.");
-                    resp.setAuthorCredibilityScore(null);
-                    resp.setAuthorStatus(null);
-                    resp.setAuthorMessage("Upgrade to Premium to see author credibility details.");
-                    resp.setFactCheckDetails(null);  // claim-by-claim breakdown is premium
-                    resp.setAnalysisSummary(
-                        "This article was rated " +
-                        resp.getCredibilityVerdict().toLowerCase().replace("_", " ") +
-                        " with a score of " + String.format("%.1f", resp.getOverallScore()) + "%.\n\n" +
-                        "SUMMARY\n" + resp.getContentSummary() + "\n\n" +
-                        "Upgrade to Premium for the full report: claim-by-claim fact-checks, " +
-                        "date verification, author credibility, and image analysis.");
-                    return ResponseEntity.ok(resp);
+                    return ResponseEntity.ok(applyFreeTierRedaction((ArticleAnalysisResponse) result.getBody()));
                 }
             }
             return result;
@@ -124,6 +109,30 @@ public class ArticleController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.of("SERVER_ERROR", "Analysis failed: " + e.getMessage()));
         }
+    }
+
+    /**
+     * Free tier gets the verdict + score; the deep forensic breakdown
+     * (claim-by-claim fact-checks, date/author details) is a premium feature.
+     * Shared with other entry points into the same analysis pipeline
+     * (e.g. AudioController) so the gating logic lives in exactly one place.
+     */
+    public static ArticleAnalysisResponse applyFreeTierRedaction(ArticleAnalysisResponse resp) {
+        resp.setDateStatus(null);
+        resp.setDateScore(null);
+        resp.setDateMessage("Upgrade to Premium to see date verification details.");
+        resp.setAuthorCredibilityScore(null);
+        resp.setAuthorStatus(null);
+        resp.setAuthorMessage("Upgrade to Premium to see author credibility details.");
+        resp.setFactCheckDetails(null);  // claim-by-claim breakdown is premium
+        resp.setAnalysisSummary(
+            "This article was rated " +
+            resp.getCredibilityVerdict().toLowerCase().replace("_", " ") +
+            " with a score of " + String.format("%.1f", resp.getOverallScore()) + "%.\n\n" +
+            "SUMMARY\n" + resp.getContentSummary() + "\n\n" +
+            "Upgrade to Premium for the full report: claim-by-claim fact-checks, " +
+            "date verification, author credibility, and image analysis.");
+        return resp;
     }
 
     private ResponseEntity<?> analyzeByUrl(String url, Article article) {

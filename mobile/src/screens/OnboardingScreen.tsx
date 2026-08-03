@@ -5,35 +5,21 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 import { useTheme, displayFont } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 const SLIDES = [
-  {
-    icon: 'link-outline',
-    title: 'Check any article in seconds',
-    body: 'Paste a link or the article text and NewsCred scores its credibility out of 100.',
-  },
-  {
-    icon: 'shield-checkmark-outline',
-    title: 'Backed by real fact-checkers',
-    body: 'Claims are checked live against a global database of published fact-checks, with sources you can open yourself.',
-  },
-  {
-    icon: 'newspaper-outline',
-    title: 'Browse headlines in Newsroom',
-    body: 'Find the News tab for Top, Ghana, Politics and Latest stories — tap "Check credibility" on any headline to see its score instantly.',
-  },
-  {
-    icon: 'sparkles-outline',
-    title: 'Go further with Premium',
-    body: 'Unlimited checks and the full forensic report — date, author, and every fact-check match. Pay securely with Paystack.',
-  },
-];
+  { icon: 'link-outline', titleKey: 'onboarding.slide1Title', bodyKey: 'onboarding.slide1Body' },
+  { icon: 'shield-checkmark-outline', titleKey: 'onboarding.slide2Title', bodyKey: 'onboarding.slide2Body' },
+  { icon: 'newspaper-outline', titleKey: 'onboarding.slide3Title', bodyKey: 'onboarding.slide3Body' },
+  { icon: 'sparkles-outline', titleKey: 'onboarding.slide4Title', bodyKey: 'onboarding.slide4Body' },
+] as const;
 
 const OnboardingScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const s = styles(colors);
   const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
@@ -65,7 +51,7 @@ const OnboardingScreen = ({ navigation }: any) => {
       <View style={s.topRow}>
         <Text style={s.brand}>NewsCred</Text>
         <TouchableOpacity onPress={finish}>
-          <Text style={s.skip}>Skip</Text>
+          <Text style={s.skip}>{t('onboarding.skip')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -82,8 +68,8 @@ const OnboardingScreen = ({ navigation }: any) => {
             <View style={s.iconWrap}>
               <Ionicons name={slide.icon as any} size={56} color={colors.teal} />
             </View>
-            <Text style={s.title}>{slide.title}</Text>
-            <Text style={s.body}>{slide.body}</Text>
+            <Text style={s.title}>{t(slide.titleKey)}</Text>
+            <Text style={s.body}>{t(slide.bodyKey)}</Text>
           </View>
         ))}
       </ScrollView>
@@ -96,7 +82,7 @@ const OnboardingScreen = ({ navigation }: any) => {
 
       <TouchableOpacity style={s.primaryBtn} onPress={next} activeOpacity={0.85}>
         <Text style={s.primaryBtnText}>
-          {index === SLIDES.length - 1 ? 'Get started' : 'Next'}
+          {index === SLIDES.length - 1 ? t('onboarding.getStarted') : t('onboarding.next')}
         </Text>
       </TouchableOpacity>
     </SafeAreaView>

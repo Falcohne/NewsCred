@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import ScoreCircle from '../components/ui/ScoreCircle';
 import { useTheme, displayFont, verdictLabel } from '../context/ThemeContext';
@@ -10,6 +11,7 @@ interface SourceRow { name: string; count: number; avg: number; topVerdict: stri
 
 const SourceDatabaseScreen = () => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const s = styles(colors);
 
   const [sources, setSources] = useState<SourceRow[]>([]);
@@ -21,7 +23,7 @@ const SourceDatabaseScreen = () => {
       const res = await api.get('/articles/mine');
       const map: Record<string, { total: number; count: number; verdicts: Record<string, number> }> = {};
       (res.data || []).forEach((a: any) => {
-        const name = a.sourceName || 'Pasted text';
+        const name = a.sourceName || t('common.pastedText');
         if (!map[name]) map[name] = { total: 0, count: 0, verdicts: {} };
         map[name].total += a.overallScore || 0;
         map[name].count += 1;
@@ -45,13 +47,13 @@ const SourceDatabaseScreen = () => {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <Text style={s.pageTitle}>Sources you have checked</Text>
+      <Text style={s.pageTitle}>{t('sourceDatabase.pageTitle')}</Text>
       {loading ? (
         <ActivityIndicator color={colors.teal} style={{ marginTop: 40 }} />
       ) : sources.length === 0 ? (
         <View style={s.emptyWrap}>
-          <Text style={s.emptyTitle}>No sources yet</Text>
-          <Text style={s.emptyBody}>Check a few articles and their sources will build up here with average scores.</Text>
+          <Text style={s.emptyTitle}>{t('sourceDatabase.emptyTitle')}</Text>
+          <Text style={s.emptyBody}>{t('sourceDatabase.emptyBody')}</Text>
         </View>
       ) : (
         <FlatList
@@ -65,7 +67,10 @@ const SourceDatabaseScreen = () => {
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={s.rowTitle} numberOfLines={1}>{item.name}</Text>
                 <Text style={s.rowMeta}>
-                  {item.count} check{item.count === 1 ? '' : 's'} · usually {verdictLabel(item.topVerdict).toLowerCase()}
+                  {t('sourceDatabase.checksCountAndVerdict', {
+                    count: item.count,
+                    verdict: verdictLabel(item.topVerdict).toLowerCase(),
+                  })}
                 </Text>
               </View>
             </View>

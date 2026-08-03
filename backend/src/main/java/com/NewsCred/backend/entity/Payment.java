@@ -1,8 +1,8 @@
 package com.NewsCred.backend.entity;
 
-import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.UuidGenerator;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 public class Payment {
 
     @Id
-    @GeneratedValue(generator = "uuid")
-    @GenericGenerator(name = "uuid", strategy = "uuid2")
+    @GeneratedValue
+    @UuidGenerator
     private String id;
 
     @Column(name = "user_id", nullable = false)

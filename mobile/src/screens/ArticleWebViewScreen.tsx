@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import {
   Surface,
@@ -29,6 +30,7 @@ interface ArticleWebViewScreenProps {
  */
 const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) => {
   const { darkMode } = useTheme();
+  const { t } = useTranslation();
   const { url, title } = route.params || {};
   const webViewRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(true);
@@ -47,8 +49,8 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
 
   const handleError = (errorEvent: any) => {
     setLoading(false);
-    setError('Failed to load the article. Please try again.');
-    console.log('WebView error:', errorEvent);
+    setError(t('articleWebView.loadFailed'));
+    if (__DEV__) console.warn('WebView error:', errorEvent);
   };
 
   const handleNavigationStateChange = (navState: any) => {
@@ -80,11 +82,11 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
       if (canOpen) {
         await Linking.openURL(url);
       } else {
-        setError('Cannot open this URL in browser.');
+        setError(t('articleWebView.cannotOpenUrl'));
       }
     } catch (error) {
-      console.log('Error opening in browser:', error);
-      setError('Failed to open in browser.');
+      if (__DEV__) console.warn('Error opening in browser:', error);
+      setError(t('articleWebView.openInBrowserFailed'));
     }
   };
 
@@ -102,7 +104,7 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
         <View style={[styles.loadingContainer, darkMode && styles.loadingContainerDark]}>
           <PaperActivityIndicator size="large" color="#0F6E56" />
           <Text style={[styles.loadingText, darkMode && styles.textDark]}>
-            Loading article...
+            {t('articleWebView.loadingArticle')}
           </Text>
         </View>
       )}
@@ -132,10 +134,10 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
         iconColor={darkMode ? '#EF5350' : '#D32F2F'}
       />
       <Text style={[styles.errorTitle, darkMode && styles.textDark]}>
-        Unable to Load Article
+        {t('articleWebView.unableToLoad')}
       </Text>
       <Text style={[styles.errorMessage, darkMode && styles.textMuted]}>
-        {error || 'The article could not be loaded. Please try again.'}
+        {error || t('articleWebView.couldNotLoad')}
       </Text>
       <View style={styles.errorButtons}>
         <Button
@@ -145,7 +147,7 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
           buttonColor="#0F6E56"
           labelStyle={styles.errorButtonLabel}
         >
-          Try Again
+          {t('articleWebView.tryAgain')}
         </Button>
         <Button
           mode="outlined"
@@ -153,7 +155,7 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
           style={[styles.errorButton, styles.errorButtonOutline]}
           labelStyle={[styles.errorButtonOutlineLabel, darkMode && styles.textDark]}
         >
-          Open in Browser
+          {t('articleWebView.openInBrowser')}
         </Button>
       </View>
     </View>
@@ -171,7 +173,7 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
             iconColor={darkMode ? '#FFFFFF' : '#1A1A16'}
           />
           <Text style={[styles.headerTitle, darkMode && styles.textDark]} numberOfLines={1}>
-            {title || 'Article'}
+            {title || t('articleWebView.articleFallbackTitle')}
           </Text>
           <View style={styles.headerRight}>
             <IconButton
@@ -204,7 +206,7 @@ const ArticleWebViewScreen = ({ route, navigation }: ArticleWebViewScreenProps) 
             iconColor={canGoForward ? (darkMode ? '#FFFFFF' : '#1A1A16') : '#666666'}
           />
           <Text style={[styles.navText, darkMode && styles.textMuted]}>
-            {loading ? 'Loading...' : 'Ready'}
+            {loading ? t('articleWebView.loading') : t('articleWebView.ready')}
           </Text>
         </View>
       </Surface>

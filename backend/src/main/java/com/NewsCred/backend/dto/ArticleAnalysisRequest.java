@@ -1,6 +1,6 @@
 package com.NewsCred.backend.dto;
 
-import javax.validation.constraints.Pattern;
+import jakarta.validation.constraints.Pattern;
 
 public class ArticleAnalysisRequest {
 

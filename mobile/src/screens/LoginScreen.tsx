@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import CustomAlert from '../components/CustomAlert';
 import { useTheme, displayFont } from '../context/ThemeContext';
@@ -25,6 +26,7 @@ export const storeSession = async (d: any) => {
 
 const LoginScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const s = styles(colors);
 
   const [identifier, setIdentifier] = useState('');
@@ -35,7 +37,7 @@ const LoginScreen = ({ navigation }: any) => {
 
   const login = async () => {
     if (!identifier.trim() || !password) {
-      setAlert({ title: 'Missing details', message: 'Enter your email or username and your password.' });
+      setAlert({ title: t('login.missingDetailsTitle'), message: t('login.missingDetailsMessage') });
       return;
     }
     setLoading(true);
@@ -49,8 +51,8 @@ const LoginScreen = ({ navigation }: any) => {
       navigation.replace(seen === 'true' ? 'MainTabs' : 'Onboarding');
     } catch (error: any) {
       const msg = error.response?.data?.message
-        || (error.response ? 'Email/username or password is incorrect.' : 'Cannot reach the server. Check your connection.');
-      setAlert({ title: 'Sign in failed', message: msg });
+        || (error.response ? t('login.wrongCredentials') : t('login.cannotReachServer'));
+      setAlert({ title: t('login.signInFailedTitle'), message: msg });
     } finally {
       setLoading(false);
     }
@@ -61,15 +63,15 @@ const LoginScreen = ({ navigation }: any) => {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
           <Text style={s.brand}>NewsCred</Text>
-          <Text style={s.tagline}>Read smarter. Share safer.</Text>
+          <Text style={s.tagline}>{t('login.tagline')}</Text>
 
           <View style={s.card}>
-            <Text style={s.heading}>Sign in</Text>
+            <Text style={s.heading}>{t('login.heading')}</Text>
 
-            <Text style={s.label}>Email or username</Text>
+            <Text style={s.label}>{t('login.emailOrUsername')}</Text>
             <TextInput
               style={s.input}
-              placeholder="name@example.com"
+              placeholder={t('login.emailPlaceholder')}
               placeholderTextColor={colors.hint}
               value={identifier}
               onChangeText={setIdentifier}
@@ -78,11 +80,11 @@ const LoginScreen = ({ navigation }: any) => {
               keyboardType="email-address"
             />
 
-            <Text style={s.label}>Password</Text>
+            <Text style={s.label}>{t('login.password')}</Text>
             <View style={s.passwordRow}>
               <TextInput
                 style={[s.input, { flex: 1, marginBottom: 0, borderWidth: 0 }]}
-                placeholder="Your password"
+                placeholder={t('login.passwordPlaceholder')}
                 placeholderTextColor={colors.hint}
                 value={password}
                 onChangeText={setPassword}
@@ -90,24 +92,24 @@ const LoginScreen = ({ navigation }: any) => {
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ paddingHorizontal: 12 }}>
                 <Text style={{ color: colors.teal, fontSize: 12, fontWeight: '600' }}>
-                  {showPassword ? 'Hide' : 'Show'}
+                  {showPassword ? t('login.hide') : t('login.show')}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity style={s.primaryBtn} onPress={login} disabled={loading} activeOpacity={0.85}>
-              {loading ? <ActivityIndicator color={colors.onTeal} /> : <Text style={s.primaryBtnText}>Sign in</Text>}
+              {loading ? <ActivityIndicator color={colors.onTeal} /> : <Text style={s.primaryBtnText}>{t('login.signIn')}</Text>}
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={{ marginTop: 14, alignItems: 'center' }}>
-              <Text style={{ color: colors.teal, fontSize: 13, fontWeight: '600' }}>Forgot password?</Text>
+              <Text style={{ color: colors.teal, fontSize: 13, fontWeight: '600' }}>{t('login.forgotPassword')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={s.footerRow}>
-            <Text style={{ color: colors.inkMuted, fontSize: 13 }}>New to NewsCred? </Text>
+            <Text style={{ color: colors.inkMuted, fontSize: 13 }}>{t('login.newToApp')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={{ color: colors.teal, fontSize: 13, fontWeight: '700' }}>Create an account</Text>
+              <Text style={{ color: colors.teal, fontSize: 13, fontWeight: '700' }}>{t('login.createAccount')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -118,7 +120,7 @@ const LoginScreen = ({ navigation }: any) => {
           visible
           title={alert.title}
           message={alert.message}
-          buttons={alert.buttons || [{ text: 'OK' }]}
+          buttons={alert.buttons || [{ text: t('common.ok') }]}
           onClose={() => setAlert(null)}
         />
       )}

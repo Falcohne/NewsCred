@@ -1,12 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Share, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconButton } from 'react-native-paper';
-import { useTheme, displayFont, verdictLabel } from '../context/ThemeContext';
+import ViewShot, { ViewShotRef } from 'react-native-view-shot';
+import { useTranslation } from 'react-i18next';
+import { useTheme, displayFont, verdictLabel, scoreColors } from '../context/ThemeContext';
 import ScoreDial from '../components/ui/ScoreDial';
 import VerdictChip from '../components/ui/VerdictChip';
 import BreakdownBar from '../components/ui/BreakdownBar';
 import EvidenceCard, { FactCheckMatch } from '../components/ui/EvidenceCard';
+import ShareableResultCard from '../components/ui/ShareableResultCard';
+import { shareViewAsImage } from '../services/shareUtils';
 
 /**
  * Credibility report — the app's hero screen.
@@ -35,6 +39,7 @@ const avg = (vals: (number | null)[]): number | null => {
 const AnalysisDetailScreen = ({ route, navigation }: any) => {
   const { result } = route.params as { result: any };
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const score = Math.round(result?.overallScore ?? 0);
 
@@ -68,15 +73,19 @@ const AnalysisDetailScreen = ({ route, navigation }: any) => {
   const shareReport = async () => {
     try {
       await Share.share({
-        message:
-          `NewsCred credibility report\n` +
-          `"${result?.title || 'Untitled article'}"\n` +
-          `Score: ${score}/100 — ${verdictLabel(result?.credibilityVerdict)}\n` +
-          (matches.length ? `${matches.length} related fact-check(s) found.\n` : '') +
-          `Checked with NewsCred.`,
+        message: t('analysisDetail.shareReportMessage', {
+          title: result?.title || t('common.untitledArticle'),
+          score,
+          verdict: verdictLabel(result?.credibilityVerdict),
+          matches: matches.length ? t('analysisDetail.shareReportMatchesLine', { count: matches.length }) : '',
+        }),
       });
     } catch {}
   };
+
+  const cardShotRef = useRef<ViewShotRef>(null);
+  const cardColors = scoreColors(score, colors);
+  const shareAsImage = () => shareViewAsImage(cardShotRef);
 
   const s = styles(colors);
 
@@ -87,10 +96,18 @@ const AnalysisDetailScreen = ({ route, navigation }: any) => {
         {/* Hero: the trust dial */}
         <View style={s.card}>
           <Text style={s.articleTitle} numberOfLines={3}>
-            {result?.title || 'Untitled article'}
+            {result?.title || t('common.untitledArticle')}
           </Text>
           {!!result?.sourceName && (
             <Text style={s.sourceName}>{result.sourceName}</Text>
+          )}
+          {!!result?.detectedLanguage && (
+            <View style={s.translatedBadge}>
+              <IconButton icon="translate" size={13} iconColor={colors.inkMuted} style={{ margin: 0 }} />
+              <Text style={s.translatedBadgeText}>
+                {t('analysisDetail.translatedFrom', { language: result.detectedLanguage.toUpperCase() })}
+              </Text>
+            </View>
           )}
           <View style={{ marginTop: 12 }}>
             <ScoreDial score={score} />
@@ -101,58 +118,73 @@ const AnalysisDetailScreen = ({ route, navigation }: any) => {
           <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' }}>
             <TouchableOpacity onPress={shareReport} style={s.shareRow}>
               <IconButton icon="share-variant" size={16} iconColor={colors.teal} style={{ margin: 0 }} />
-              <Text style={s.shareText}>Share this report</Text>
+              <Text style={s.shareText}>{t('analysisDetail.shareThisReport')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={shareAsImage} style={[s.shareRow, { marginLeft: 4 }]}>
+              <IconButton icon="image-outline" size={16} iconColor={colors.teal} style={{ margin: 0 }} />
+              <Text style={s.shareText}>{t('analysisDetail.shareAsImage')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate('HowWeScore')} style={[s.shareRow, { marginLeft: 4 }]}>
               <IconButton icon="information-outline" size={16} iconColor={colors.inkMuted} style={{ margin: 0 }} />
-              <Text style={[s.shareText, { color: colors.inkMuted }]}>How we score</Text>
+              <Text style={[s.shareText, { color: colors.inkMuted }]}>{t('analysisDetail.howWeScore')}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* Off-screen: captured to an image for "Share as image" above. */}
+        <View style={s.offscreen} pointerEvents="none">
+          <ViewShot ref={cardShotRef} options={{ format: 'png', quality: 0.95 }}>
+            <ShareableResultCard
+              headline={result?.title || t('common.untitledArticle')}
+              verdictText={verdictLabel(result?.credibilityVerdict)}
+              percent={score}
+              fg={cardColors.fg}
+              bg={cardColors.bg}
+              sourceLabel={result?.sourceName}
+              footerText={t('analysisDetail.checkedWithNewsCred')}
+            />
+          </ViewShot>
+        </View>
+
         {/* What shaped this score */}
         <View style={s.card}>
-          <Text style={s.sectionTitle}>What shaped this score</Text>
-          {languagePct !== null && <BreakdownBar label="Language signals" value={languagePct} />}
-          {factPct !== null && <BreakdownBar label="Fact-check verification" value={factPct} />}
-          {datePct !== null && <BreakdownBar label="Date freshness" value={datePct} />}
-          {authorPct !== null && <BreakdownBar label="Author transparency" value={authorPct} />}
+          <Text style={s.sectionTitle}>{t('analysisDetail.whatShapedScore')}</Text>
+          {languagePct !== null && <BreakdownBar label={t('analysisDetail.languageSignals')} value={languagePct} />}
+          {factPct !== null && <BreakdownBar label={t('analysisDetail.factCheckVerification')} value={factPct} />}
+          {datePct !== null && <BreakdownBar label={t('analysisDetail.dateFreshness')} value={datePct} />}
+          {authorPct !== null && <BreakdownBar label={t('analysisDetail.authorTransparency')} value={authorPct} />}
           {languagePct === null && factPct === null && datePct === null && authorPct === null && (
-            <Text style={s.mutedText}>Breakdown not available for this analysis.</Text>
+            <Text style={s.mutedText}>{t('analysisDetail.breakdownUnavailable')}</Text>
           )}
         </View>
 
         {/* Live fact-checks */}
         <View style={s.card}>
           <Text style={s.sectionTitle}>
-            Live fact-checks{matches.length ? ` · ${matches.length} found` : ''}
+            {t('analysisDetail.liveFactChecks')}
+            {matches.length ? t('analysisDetail.liveFactChecksFound', { count: matches.length }) : ''}
           </Text>
           {matches.length > 0 ? (
             matches.map((m, i) => <EvidenceCard key={i} match={m} />)
           ) : isPremiumLocked ? (
-            <Text style={s.mutedText}>
-              Upgrade to Premium to see claim-by-claim fact-check matches with sources.
-            </Text>
+            <Text style={s.mutedText}>{t('analysisDetail.premiumLockedFactChecks')}</Text>
           ) : (
-            <Text style={s.mutedText}>
-              No published fact-checks matched this article's claims. That is neutral —
-              it does not prove the claims true or false.
-            </Text>
+            <Text style={s.mutedText}>{t('analysisDetail.noFactCheckMatch')}</Text>
           )}
         </View>
 
         {/* Verification details */}
         {(result?.authorName || result?.publishDate || result?.dateMessage || result?.authorMessage) && (
           <View style={s.card}>
-            <Text style={s.sectionTitle}>Verification details</Text>
+            <Text style={s.sectionTitle}>{t('analysisDetail.verificationDetails')}</Text>
             {!!result?.authorName && (
-              <DetailRow label="Author" value={result.authorName} colors={colors} />
+              <DetailRow label={t('analysisDetail.authorLabel')} value={result.authorName} colors={colors} />
             )}
             {!!result?.authorMessage && (
               <Text style={s.detailNote}>{result.authorMessage}</Text>
             )}
             {!!result?.publishDate && (
-              <DetailRow label="Published" value={String(result.publishDate)} colors={colors} />
+              <DetailRow label={t('analysisDetail.publishedLabel')} value={String(result.publishDate)} colors={colors} />
             )}
             {!!result?.dateMessage && (
               <Text style={s.detailNote}>{result.dateMessage}</Text>
@@ -163,7 +195,7 @@ const AnalysisDetailScreen = ({ route, navigation }: any) => {
         {/* Full written report */}
         {!!result?.analysisSummary && (
           <View style={s.card}>
-            <Text style={s.sectionTitle}>Full report</Text>
+            <Text style={s.sectionTitle}>{t('analysisDetail.fullReport')}</Text>
             <Text style={s.reportText}>{result.analysisSummary}</Text>
           </View>
         )}
@@ -202,12 +234,15 @@ const styles = (c: any) => StyleSheet.create({
     lineHeight: 26,
   },
   sourceName: { fontSize: 12, color: c.inkMuted, textAlign: 'center', marginTop: 4 },
+  translatedBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  translatedBadgeText: { fontSize: 11, color: c.inkMuted, fontStyle: 'italic' },
   sectionTitle: { ...displayFont, fontSize: 16, color: c.ink, marginBottom: 12 },
   mutedText: { fontSize: 13, color: c.inkMuted, lineHeight: 20 },
   detailNote: { fontSize: 12, color: c.inkMuted, lineHeight: 18, marginBottom: 10 },
   reportText: { fontSize: 13, color: c.inkMuted, lineHeight: 21 },
   shareRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 10 },
   shareText: { fontSize: 13, color: c.teal, fontWeight: '600' },
+  offscreen: { position: 'absolute', top: -9999, left: -9999 },
 });
 
 export default AnalysisDetailScreen;

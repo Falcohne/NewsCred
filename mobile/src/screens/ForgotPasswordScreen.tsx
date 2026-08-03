@@ -4,12 +4,14 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import CustomAlert from '../components/CustomAlert';
 import { useTheme, displayFont } from '../context/ThemeContext';
 
 const ForgotPasswordScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const s = styles(colors);
 
   const [step, setStep] = useState<1 | 2>(1);
@@ -21,7 +23,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
 
   const requestCode = async () => {
     if (!email.trim()) {
-      setAlert({ title: 'Email needed', message: 'Enter the email you registered with.' });
+      setAlert({ title: t('forgotPassword.emailNeededTitle'), message: t('forgotPassword.emailNeededMessage') });
       return;
     }
     setLoading(true);
@@ -29,20 +31,20 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
       await api.post('/auth/forgot-password', { email: email.trim().toLowerCase() });
       setStep(2);
       setAlert({
-        title: 'Check your email',
-        message: 'If that email is registered, a 6-digit code is on its way. It expires in 15 minutes.',
+        title: t('forgotPassword.checkEmailTitle'),
+        message: t('forgotPassword.checkEmailMessage'),
       });
     } catch (error: any) {
       setAlert({
-        title: 'Could not send code',
-        message: error.response?.data?.message || 'Something went wrong. Try again.',
+        title: t('forgotPassword.couldNotSendTitle'),
+        message: error.response?.data?.message || t('forgotPassword.couldNotSendMessage'),
       });
     } finally { setLoading(false); }
   };
 
   const reset = async () => {
     if (code.trim().length !== 6 || !newPassword) {
-      setAlert({ title: 'Missing details', message: 'Enter the 6-digit code and a new password.' });
+      setAlert({ title: t('forgotPassword.missingDetailsTitle'), message: t('forgotPassword.missingDetailsMessage') });
       return;
     }
     setLoading(true);
@@ -53,14 +55,14 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
         newPassword,
       });
       setAlert({
-        title: 'Password reset',
-        message: 'Sign in with your new password.',
-        buttons: [{ text: 'Go to sign in', onPress: () => navigation.replace('Login') }],
+        title: t('forgotPassword.resetSuccessTitle'),
+        message: t('forgotPassword.resetSuccessMessage'),
+        buttons: [{ text: t('forgotPassword.goToSignIn'), onPress: () => navigation.replace('Login') }],
       });
     } catch (error: any) {
       setAlert({
-        title: 'Reset failed',
-        message: error.response?.data?.message || 'Invalid or expired code.',
+        title: t('forgotPassword.resetFailedTitle'),
+        message: error.response?.data?.message || t('forgotPassword.resetFailedMessage'),
       });
     } finally { setLoading(false); }
   };
@@ -70,15 +72,13 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
           <Text style={s.brand}>NewsCred</Text>
-          <Text style={s.tagline}>Reset your password</Text>
+          <Text style={s.tagline}>{t('forgotPassword.tagline')}</Text>
 
           <View style={s.card}>
             {step === 1 ? (
               <>
-                <Text style={s.heading}>Forgot your password?</Text>
-                <Text style={s.body}>
-                  Enter your email and we'll send a 6-digit reset code.
-                </Text>
+                <Text style={s.heading}>{t('forgotPassword.forgotHeading')}</Text>
+                <Text style={s.body}>{t('forgotPassword.forgotBody')}</Text>
                 <TextInput
                   style={s.input}
                   placeholder="name@example.com"
@@ -89,48 +89,48 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
                   keyboardType="email-address"
                 />
                 <TouchableOpacity style={s.primaryBtn} onPress={requestCode} disabled={loading} activeOpacity={0.85}>
-                  {loading ? <ActivityIndicator color={colors.onTeal} /> : <Text style={s.primaryBtnText}>Send reset code</Text>}
+                  {loading ? <ActivityIndicator color={colors.onTeal} /> : <Text style={s.primaryBtnText}>{t('forgotPassword.sendCodeButton')}</Text>}
                 </TouchableOpacity>
               </>
             ) : (
               <>
-                <Text style={s.heading}>Enter the code</Text>
-                <Text style={s.body}>We sent a 6-digit code to {email.trim()}.</Text>
+                <Text style={s.heading}>{t('forgotPassword.enterCodeHeading')}</Text>
+                <Text style={s.body}>{t('forgotPassword.codeSentBody', { email: email.trim() })}</Text>
                 <TextInput
                   style={[s.input, { textAlign: 'center', letterSpacing: 8, fontSize: 18, fontWeight: '700' }]}
                   placeholder="000000"
                   placeholderTextColor={colors.hint}
                   value={code}
-                  onChangeText={(t) => setCode(t.replace(/[^0-9]/g, '').slice(0, 6))}
+                  onChangeText={(raw) => setCode(raw.replace(/[^0-9]/g, '').slice(0, 6))}
                   keyboardType="number-pad"
                 />
                 <TextInput
                   style={s.input}
-                  placeholder="New password"
+                  placeholder={t('forgotPassword.newPasswordPlaceholder')}
                   placeholderTextColor={colors.hint}
                   value={newPassword}
                   onChangeText={setNewPassword}
                   secureTextEntry
                 />
                 <TouchableOpacity style={s.primaryBtn} onPress={reset} disabled={loading} activeOpacity={0.85}>
-                  {loading ? <ActivityIndicator color={colors.onTeal} /> : <Text style={s.primaryBtnText}>Reset password</Text>}
+                  {loading ? <ActivityIndicator color={colors.onTeal} /> : <Text style={s.primaryBtnText}>{t('forgotPassword.resetPasswordButton')}</Text>}
                 </TouchableOpacity>
                 <TouchableOpacity onPress={requestCode} style={{ marginTop: 12, alignItems: 'center' }}>
-                  <Text style={{ color: colors.teal, fontSize: 13, fontWeight: '600' }}>Send a new code</Text>
+                  <Text style={{ color: colors.teal, fontSize: 13, fontWeight: '600' }}>{t('forgotPassword.sendNewCode')}</Text>
                 </TouchableOpacity>
               </>
             )}
           </View>
 
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 18, alignItems: 'center' }}>
-            <Text style={{ color: colors.inkMuted, fontSize: 13 }}>Back to sign in</Text>
+            <Text style={{ color: colors.inkMuted, fontSize: 13 }}>{t('forgotPassword.backToSignIn')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
 
       {alert && (
         <CustomAlert visible title={alert.title} message={alert.message}
-          buttons={alert.buttons || [{ text: 'OK' }]} onClose={() => setAlert(null)} />
+          buttons={alert.buttons || [{ text: t('common.ok') }]} onClose={() => setAlert(null)} />
       )}
     </SafeAreaView>
   );

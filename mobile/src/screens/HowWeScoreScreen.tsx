@@ -2,111 +2,71 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import BreakdownBar from '../components/ui/BreakdownBar';
 import { useTheme, displayFont } from '../context/ThemeContext';
 
 const COMPONENTS = [
-  {
-    weight: 35,
-    label: 'Language signals',
-    body: 'We read the writing itself — sentence depth, cited evidence, sensational or clickbait phrasing, and headline patterns. Six indicators combine into this score.',
-  },
-  {
-    weight: 30,
-    label: 'Live fact-check verification',
-    body: 'Claims are extracted from the article and checked against a global database of published fact-checks from organisations such as PolitiFact, Snopes, FactCheck.org, AFP and Full Fact.',
-  },
-  {
-    weight: 15,
-    label: 'Author transparency',
-    body: 'Whether the article names an author, and whether that author is linked to a known publication. We never claim to personally vouch for a named individual.',
-  },
-  {
-    weight: 10,
-    label: 'Date freshness',
-    body: "How recently the article was published, when a date can be found. Older articles score lower on this component only, and timeless topics are treated more leniently.",
-  },
-  {
-    weight: 10,
-    label: 'Image signals',
-    body: 'Weak, URL-based checks for stock photography or AI-generation tool references in image links.',
-  },
-];
+  { weight: 35, labelKey: 'howWeScore.component1Label', bodyKey: 'howWeScore.component1Body' },
+  { weight: 30, labelKey: 'howWeScore.component2Label', bodyKey: 'howWeScore.component2Body' },
+  { weight: 15, labelKey: 'howWeScore.component3Label', bodyKey: 'howWeScore.component3Body' },
+  { weight: 10, labelKey: 'howWeScore.component4Label', bodyKey: 'howWeScore.component4Body' },
+  { weight: 10, labelKey: 'howWeScore.component5Label', bodyKey: 'howWeScore.component5Body' },
+] as const;
 
 const HowWeScoreScreen = () => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const s = styles(colors);
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.pageTitle}>How we score</Text>
-        <Text style={s.intro}>
-          Every score out of 100 is built from five weighted components. Here is
-          exactly how each one works, and where the system's limits are.
-        </Text>
+        <Text style={s.pageTitle}>{t('howWeScore.pageTitle')}</Text>
+        <Text style={s.intro}>{t('howWeScore.intro')}</Text>
 
         <View style={s.card}>
-          <Text style={s.sectionTitle}>The five components</Text>
+          <Text style={s.sectionTitle}>{t('howWeScore.componentsSectionTitle')}</Text>
           {COMPONENTS.map((c) => (
-            <View key={c.label} style={{ marginBottom: 4 }}>
-              <BreakdownBar label={c.label} value={c.weight} />
+            <View key={c.labelKey} style={{ marginBottom: 4 }}>
+              <BreakdownBar label={t(c.labelKey)} value={c.weight} />
             </View>
           ))}
         </View>
 
         {COMPONENTS.map((c) => (
-          <View key={c.label} style={s.card}>
-            <Text style={s.componentTitle}>{c.label} · {c.weight}%</Text>
-            <Text style={s.componentBody}>{c.body}</Text>
+          <View key={c.labelKey} style={s.card}>
+            <Text style={s.componentTitle}>{t(c.labelKey)} · {c.weight}%</Text>
+            <Text style={s.componentBody}>{t(c.bodyKey)}</Text>
           </View>
         ))}
 
         <View style={[s.card, s.calloutCard]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <Ionicons name="shield-checkmark" size={18} color={colors.teal} style={{ marginRight: 8 }} />
-            <Text style={s.calloutTitle}>When a claim is verified false</Text>
+            <Text style={s.calloutTitle}>{t('howWeScore.falseClaimCalloutTitle')}</Text>
           </View>
-          <Text style={s.componentBody}>
-            If a professional fact-checker has rated a matching claim as false, the
-            article's overall score is capped at 40 — no matter how well the rest of
-            it is written. Good writing cannot buy a good score.
-          </Text>
+          <Text style={s.componentBody}>{t('howWeScore.falseClaimCalloutBody')}</Text>
         </View>
 
         <View style={[s.card, s.calloutCard]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <Ionicons name="information-circle" size={18} color={colors.warn} style={{ marginRight: 8 }} />
-            <Text style={s.calloutTitle}>No match found is not proof</Text>
+            <Text style={s.calloutTitle}>{t('howWeScore.noMatchCalloutTitle')}</Text>
           </View>
-          <Text style={s.componentBody}>
-            Most articles, including accurate ones, will show "no published
-            fact-checks matched." Fact-checkers cannot review everything. Absence
-            of a match is neutral — it does not mean an article is true or false.
-          </Text>
+          <Text style={s.componentBody}>{t('howWeScore.noMatchCalloutBody')}</Text>
         </View>
 
         <View style={[s.card, s.calloutCard]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <Ionicons name="warning" size={18} color={colors.bad} style={{ marginRight: 8 }} />
-            <Text style={s.calloutTitle}>A known limitation</Text>
+            <Text style={s.calloutTitle}>{t('howWeScore.limitationCalloutTitle')}</Text>
           </View>
-          <Text style={s.componentBody}>
-            Language analysis looks for patterns common in misleading writing —
-            things like citing "experts" or "studies." Very polished writing built
-            around false claims can still score higher than it should on this
-            component alone. This is exactly why live fact-check verification
-            carries the most weight in the final score, and why a verified-false
-            claim overrides everything else.
-          </Text>
+          <Text style={s.componentBody}>{t('howWeScore.limitationCalloutBody')}</Text>
         </View>
 
         <View style={s.footerCard}>
-          <Text style={s.footerText}>
-            NewsCred is a decision-support tool, not a verdict. Use it alongside
-            your own judgement, and always check a claim from more than one source
-            before you decide to trust or share it.
-          </Text>
+          <Text style={s.footerText}>{t('howWeScore.footer')}</Text>
         </View>
 
         <View style={{ height: 24 }} />

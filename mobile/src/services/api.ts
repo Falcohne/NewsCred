@@ -43,7 +43,9 @@ const getApiBaseUrl = (): string => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
-console.log(`API Base URL: ${API_BASE_URL}`);
+if (__DEV__) {
+  console.log(`API Base URL: ${API_BASE_URL}`);
+}
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -51,7 +53,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
-  timeout: 30000,
+  timeout: 60000,
 });
 
 // Attach the JWT. NOTE: we deliberately do NOT send user id or premium

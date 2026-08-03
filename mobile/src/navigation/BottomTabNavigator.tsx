@@ -1,5 +1,5 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Platform, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { Badge } from 'react-native-paper';
@@ -186,7 +186,7 @@ const BottomTabNavigator = () => {
   );
 };
 
-const styles = {
+const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
     top: -4,
@@ -195,6 +195,6 @@ const styles = {
     color: '#FFFFFF',
     fontSize: 10,
   },
-};
+});
 
 export default BottomTabNavigator;

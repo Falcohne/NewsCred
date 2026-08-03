@@ -14,7 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -88,6 +88,24 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.of("SERVER_ERROR", "Token refresh failed: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/auth/logout-all")
+    public ResponseEntity<?> logoutEverywhere(@AuthenticationPrincipal User currentUser) {
+        try {
+            if (currentUser == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ErrorResponse.of("AUTH_ERROR", "Authentication required"));
+            }
+            authService.logoutEverywhere(currentUser.getId());
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Logged out on all devices. Please sign in again.");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ErrorResponse.of("SERVER_ERROR", "Failed to log out everywhere: " + e.getMessage()));
         }
     }
 

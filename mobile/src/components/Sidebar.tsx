@@ -7,8 +7,10 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 import type { RootStackParamList } from '../types';
 
 interface SidebarProps {
@@ -17,7 +19,7 @@ interface SidebarProps {
   onUpgradePress?: () => void;
 }
 
-type NavigationType = NavigationProp<RootStackParamList>;
+type NavigationType = StackNavigationProp<RootStackParamList>;
 
 /**
  * Sidebar navigation component for the main app
@@ -25,16 +27,19 @@ type NavigationType = NavigationProp<RootStackParamList>;
  */
 const Sidebar = ({ activeTab, onTabPress, onUpgradePress }: SidebarProps) => {
   const navigation = useNavigation<NavigationType>();
+  const { t } = useTranslation();
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard' },
-    { id: 'url-scanner', label: 'URL Scanner' },
-    { id: 'text-input', label: 'Text Input' },
-    { id: 'source-database', label: 'Source Database' },
-    { id: 'statistics', label: 'Statistics' },
-    { id: 'saved-articles', label: 'Saved Articles' },
-    { id: 'settings', label: 'Settings' },
-    { id: 'help-guide', label: 'Help and Guide' },
+    { id: 'dashboard', label: t('sidebar.dashboard') },
+    { id: 'url-scanner', label: t('sidebar.urlScanner') },
+    { id: 'text-input', label: t('sidebar.textInput') },
+    { id: 'image-scanner', label: t('sidebar.imageScanner') },
+    { id: 'audio-scanner', label: t('sidebar.audioScanner') },
+    { id: 'source-database', label: t('sidebar.sourceDatabase') },
+    { id: 'statistics', label: t('sidebar.statistics') },
+    { id: 'saved-articles', label: t('sidebar.savedArticles') },
+    { id: 'settings', label: t('sidebar.settings') },
+    { id: 'help-guide', label: t('sidebar.helpGuide') },
   ];
 
   /**
@@ -43,12 +48,12 @@ const Sidebar = ({ activeTab, onTabPress, onUpgradePress }: SidebarProps) => {
   const handleLogout = async (): Promise<void> => {
     try {
       Alert.alert(
-        'Logout',
-        'Are you sure you want to logout?',
+        t('sidebar.logoutConfirmTitle'),
+        t('sidebar.logoutConfirmMessage'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Logout',
+            text: t('sidebar.logout'),
             style: 'destructive',
             onPress: async (): Promise<void> => {
               try {
@@ -56,7 +61,7 @@ const Sidebar = ({ activeTab, onTabPress, onUpgradePress }: SidebarProps) => {
                 navigation.replace('Login');
               } catch (error) {
                 console.error('Logout error:', error);
-                Alert.alert('Error', 'Failed to logout. Please try again.');
+                Alert.alert(t('common.error'), t('sidebar.logoutError'));
               }
             },
           },
@@ -64,7 +69,7 @@ const Sidebar = ({ activeTab, onTabPress, onUpgradePress }: SidebarProps) => {
       );
     } catch (error) {
       console.error('Logout error:', error);
-      Alert.alert('Error', 'Failed to logout. Please try again.');
+      Alert.alert(t('common.error'), t('sidebar.logoutError'));
     }
   };
 
@@ -98,11 +103,17 @@ const Sidebar = ({ activeTab, onTabPress, onUpgradePress }: SidebarProps) => {
         navigation.navigate('Dashboard');
         onTabPress('text-input');
         break;
+      case 'image-scanner':
+        navigation.navigate('ImageScanner');
+        break;
+      case 'audio-scanner':
+        navigation.navigate('AudioScanner');
+        break;
       case 'help-guide':
         Alert.alert(
-          'Help and Guide',
-          'Help documentation coming soon.\n\nHow to analyze articles\nUnderstanding credibility scores\nPremium features explained\nFAQ',
-          [{ text: 'OK' }]
+          t('sidebar.helpGuideTitle'),
+          t('sidebar.helpGuideMessage'),
+          [{ text: t('common.ok') }]
         );
         break;
       default:
@@ -116,30 +127,23 @@ const Sidebar = ({ activeTab, onTabPress, onUpgradePress }: SidebarProps) => {
   const handleUpgradePress = (): void => {
     if (onUpgradePress) {
       onUpgradePress();
-    } else {
-      Alert.alert(
-        'Upgrade to Premium',
-        'Get unlimited analyses, detailed reports and advanced features.\n\nUnlimited article analyses\nDetailed credibility reports\nAdvanced source verification\nPriority support\n\nOnly $4.99/month',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Upgrade Now', 
-            onPress: (): void => {
-              if (onUpgradePress) {
-                onUpgradePress();
-              }
-            }
-          },
-        ]
-      );
+      return;
     }
+    Alert.alert(
+      t('sidebar.upgradeTitle'),
+      t('sidebar.upgradeAlertMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('sidebar.upgradeButton') },
+      ]
+    );
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.logoContainer}>
-        <Text style={styles.logo}>NewsCred</Text>
-        <Text style={styles.logoSubtext}>Analyzer</Text>
+        <Text style={styles.logo}>{t('sidebar.logo')}</Text>
+        <Text style={styles.logoSubtext}>{t('sidebar.logoSubtext')}</Text>
       </View>
 
       <ScrollView 
@@ -173,17 +177,15 @@ const Sidebar = ({ activeTab, onTabPress, onUpgradePress }: SidebarProps) => {
           style={styles.upgradeContainer}
           onPress={handleUpgradePress}
         >
-          <Text style={styles.upgradeTitle}>Upgrade to Premium</Text>
-          <Text style={styles.upgradeDesc}>
-            Get unlimited analyses, detailed reports and advanced features.
-          </Text>
+          <Text style={styles.upgradeTitle}>{t('sidebar.upgradeTitle')}</Text>
+          <Text style={styles.upgradeDesc}>{t('sidebar.upgradeDesc')}</Text>
           <View style={styles.upgradeButton}>
-            <Text style={styles.upgradeButtonText}>Upgrade Now</Text>
+            <Text style={styles.upgradeButtonText}>{t('sidebar.upgradeButton')}</Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={styles.logoutText}>{t('sidebar.logout')}</Text>
         </TouchableOpacity>
       </View>
     </View>

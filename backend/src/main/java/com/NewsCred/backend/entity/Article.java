@@ -1,6 +1,6 @@
 package com.NewsCred.backend.entity;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -11,8 +11,8 @@ import java.util.List;
 public class Article {
 
     @Id
-    @GeneratedValue(generator = "uuid")
-    @org.hibernate.annotations.GenericGenerator(name = "uuid", strategy = "uuid2")
+    @GeneratedValue
+    @org.hibernate.annotations.UuidGenerator
     private String id;
 
     @Column(nullable = false)
@@ -58,6 +58,11 @@ public class Article {
 
     @Column(name = "content_summary", columnDefinition = "TEXT")
     private String contentSummary;
+
+    /** ISO 639-1 code (e.g. "fr") if the original content was non-English and got
+     *  translated before scoring; null if English or translation wasn't available. */
+    @Column(name = "detected_language")
+    private String detectedLanguage;
 
     /** JSON array of live fact-check matches (publisher, rating, url). */
     @Column(name = "fact_check_details", columnDefinition = "TEXT")
@@ -174,6 +179,9 @@ public class Article {
 
     public String getContentSummary() { return contentSummary; }
     public void setContentSummary(String contentSummary) { this.contentSummary = contentSummary; }
+
+    public String getDetectedLanguage() { return detectedLanguage; }
+    public void setDetectedLanguage(String detectedLanguage) { this.detectedLanguage = detectedLanguage; }
 
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }

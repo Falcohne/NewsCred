@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Act
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { IconButton } from 'react-native-paper';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import CustomAlert from '../components/CustomAlert';
 import ScoreCircle from '../components/ui/ScoreCircle';
@@ -10,6 +11,7 @@ import { useTheme, displayFont, verdictLabel } from '../context/ThemeContext';
 
 const SavedArticlesScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const s = styles(colors);
 
   const [articles, setArticles] = useState<any[]>([]);
@@ -30,18 +32,22 @@ const SavedArticlesScreen = ({ navigation }: any) => {
 
   const confirmDelete = (item: any) => {
     setAlert({
-      title: 'Delete this check?',
-      message: `"${item.title || 'Untitled article'}" will be removed from your history.`,
+      title: t('savedArticles.deleteTitle'),
+      message: t('savedArticles.deleteMessage', { title: item.title || t('common.untitledArticle') }),
       buttons: [
-        { text: 'Keep it', style: 'cancel' },
+        { text: t('savedArticles.keepIt'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('savedArticles.delete'),
           onPress: async () => {
             try {
               await api.delete(`/articles/${item.id}`);
               setArticles((prev) => prev.filter((a) => a.id !== item.id));
             } catch {
-              setAlert({ title: 'Delete failed', message: 'Could not delete. Try again.', buttons: [{ text: 'OK' }] });
+              setAlert({
+                title: t('savedArticles.deleteFailedTitle'),
+                message: t('savedArticles.deleteFailedMessage'),
+                buttons: [{ text: t('common.ok') }],
+              });
             }
           },
         },
@@ -56,13 +62,13 @@ const SavedArticlesScreen = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <Text style={s.pageTitle}>Check history</Text>
+      <Text style={s.pageTitle}>{t('savedArticles.pageTitle')}</Text>
       {loading ? (
         <ActivityIndicator color={colors.teal} style={{ marginTop: 40 }} />
       ) : articles.length === 0 ? (
         <View style={s.emptyWrap}>
-          <Text style={s.emptyTitle}>No checks yet</Text>
-          <Text style={s.emptyBody}>Everything you analyze will be saved here for you to revisit.</Text>
+          <Text style={s.emptyTitle}>{t('savedArticles.emptyTitle')}</Text>
+          <Text style={s.emptyBody}>{t('savedArticles.emptyBody')}</Text>
         </View>
       ) : (
         <FlatList
@@ -79,9 +85,9 @@ const SavedArticlesScreen = ({ navigation }: any) => {
             >
               <ScoreCircle score={Math.round(item.overallScore ?? 0)} />
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={s.rowTitle} numberOfLines={2}>{item.title || 'Untitled article'}</Text>
+                <Text style={s.rowTitle} numberOfLines={2}>{item.title || t('common.untitledArticle')}</Text>
                 <Text style={s.rowMeta} numberOfLines={1}>
-                  {(item.sourceName || 'Pasted text')} · {verdictLabel(item.credibilityVerdict)}
+                  {(item.sourceName || t('common.pastedText'))} · {verdictLabel(item.credibilityVerdict)}
                   {item.createdAt ? ` · ${fmtDate(item.createdAt)}` : ''}
                 </Text>
               </View>

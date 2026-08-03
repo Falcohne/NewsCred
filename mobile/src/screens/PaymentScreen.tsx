@@ -20,6 +20,7 @@ import {
   List,
 } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 
 interface Plan {
@@ -38,6 +39,7 @@ interface Plan {
  */
 const PaymentScreen = ({ navigation }: any) => {
   const { darkMode } = useTheme();
+  const { t } = useTranslation();
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loadingPlan, setLoadingPlan] = useState(true);
@@ -51,7 +53,7 @@ const PaymentScreen = ({ navigation }: any) => {
     api
       .get('/payments/plan')
       .then((res) => setPlan(res.data))
-      .catch(() => setSnackbar('Could not load plan details'))
+      .catch(() => setSnackbar(t('payment.planLoadFailed')))
       .finally(() => setLoadingPlan(false));
   }, []);
 
@@ -63,7 +65,7 @@ const PaymentScreen = ({ navigation }: any) => {
       setCheckoutUrl(res.data.authorizationUrl);
     } catch (error: any) {
       const msg =
-        error.response?.data?.message || 'Could not start payment. Try again.';
+        error.response?.data?.message || t('payment.startFailed');
       setSnackbar(msg);
     } finally {
       setStarting(false);
@@ -77,13 +79,13 @@ const PaymentScreen = ({ navigation }: any) => {
       const res = await api.get(`/payments/verify/${ref}`);
       if (res.data.premium) {
         await AsyncStorage.setItem('isPremium', 'true');
-        setSnackbar('Payment successful! Welcome to Premium 🎉');
+        setSnackbar(t('payment.successMessage'));
         setTimeout(() => navigation.goBack(), 1600);
       } else {
-        setSnackbar('Payment could not be confirmed.');
+        setSnackbar(t('payment.notConfirmed'));
       }
     } catch {
-      setSnackbar('Payment was not completed. You have not been charged twice — you can retry.');
+      setSnackbar(t('payment.notCompleted'));
     } finally {
       setVerifying(false);
     }
@@ -109,7 +111,7 @@ const PaymentScreen = ({ navigation }: any) => {
         <View style={styles.checkoutHeader}>
           <IconButton icon="close" onPress={() => setCheckoutUrl(null)} />
           <Text style={[styles.checkoutTitle, darkMode && styles.textDark]}>
-            Secure Paystack Checkout
+            {t('payment.checkoutTitle')}
           </Text>
         </View>
         <WebView
@@ -121,7 +123,7 @@ const PaymentScreen = ({ navigation }: any) => {
           )}
         />
         <Button mode="text" onPress={() => reference && verifyPayment(reference)}>
-          I've completed payment — verify
+          {t('payment.completedVerifyButton')}
         </Button>
       </SafeAreaView>
     );
@@ -133,19 +135,19 @@ const PaymentScreen = ({ navigation }: any) => {
         <Surface style={[styles.hero, darkMode && styles.heroDark]}>
           <IconButton icon="crown" size={44} iconColor="#BA7517" />
           <Title style={[styles.heroTitle, darkMode && styles.textDark]}>
-            NewsCred Premium
+            {t('payment.heroTitle')}
           </Title>
           {loadingPlan ? (
             <ActivityIndicator />
           ) : (
-            <Text style={styles.price}>{plan?.amountDisplay ?? ''} / month</Text>
+            <Text style={styles.price}>{plan?.amountDisplay ?? ''} {t('payment.priceSuffix')}</Text>
           )}
         </Surface>
 
         <Card style={[styles.card, darkMode && styles.cardDark]}>
           <Card.Content>
             <Title style={darkMode ? styles.textDark : undefined}>
-              What you get
+              {t('payment.whatYouGet')}
             </Title>
             {(plan?.features ?? []).map((f, i) => (
               <List.Item
@@ -162,8 +164,7 @@ const PaymentScreen = ({ navigation }: any) => {
         </Card>
 
         <Paragraph style={[styles.secureNote, darkMode && styles.textMutedDark]}>
-          Payments are processed securely by Paystack. Pay with card or Mobile
-          Money (MTN, Telecel, AT). We never see or store your payment details.
+          {t('payment.secureNote')}
         </Paragraph>
 
         <Button
@@ -174,7 +175,7 @@ const PaymentScreen = ({ navigation }: any) => {
           style={styles.payButton}
           contentStyle={{ paddingVertical: 8 }}
         >
-          {verifying ? 'Verifying payment…' : 'Upgrade with Paystack'}
+          {verifying ? t('payment.verifyingPayment') : t('payment.upgradeButton')}
         </Button>
       </ScrollView>
 

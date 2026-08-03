@@ -1,8 +1,8 @@
 package com.NewsCred.backend.entity;
 
-import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.UuidGenerator;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /** Audit trail: every admin action (e.g. granting/revoking premium) is logged here. */
@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
 public class AdminAction {
 
     @Id
-    @GeneratedValue(generator = "uuid")
-    @GenericGenerator(name = "uuid", strategy = "uuid2")
+    @GeneratedValue
+    @UuidGenerator
     private String id;
 
     @Column(name = "admin_email", nullable = false)
