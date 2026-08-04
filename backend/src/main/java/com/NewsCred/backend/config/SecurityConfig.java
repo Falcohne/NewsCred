@@ -93,7 +93,7 @@ public class SecurityConfig {
             allowedOrigins = Arrays.asList(
                 "https://yourdomain.com",
                 "https://www.yourdomain.com",
-                "https://newscred-app.onrender.com",
+                "https://newscred.onrender.com",
                 "https://newscred.netlify.app"
             );
         } else {
