@@ -26,6 +26,7 @@ const SettingsScreen = ({ navigation }: any) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [isPremium, setIsPremium] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [notifs, setNotifs] = useState(false);
   const [panel, setPanel] = useState<Panel>('none');
@@ -44,6 +45,7 @@ const SettingsScreen = ({ navigation }: any) => {
     setEmail((await AsyncStorage.getItem('userEmail')) || '');
     setProfileImage(await AsyncStorage.getItem('profileImage'));
     setNotifs((await AsyncStorage.getItem('notificationsEnabled')) === 'true');
+    setIsAdmin((await AsyncStorage.getItem('isAdmin')) === 'true');
     try {
       if (uid) {
         const res = await api.get(`/users/${uid}`);
@@ -142,7 +144,7 @@ const SettingsScreen = ({ navigation }: any) => {
           text: t('settings.signOutAction'),
           onPress: async () => {
             await AsyncStorage.multiRemove([
-              'token', 'refreshToken', 'userId', 'userName', 'userEmail', 'isPremium', 'analysisCount',
+              'token', 'refreshToken', 'userId', 'userName', 'userEmail', 'isPremium', 'analysisCount', 'isAdmin',
             ]);
             navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           },
@@ -293,6 +295,22 @@ const SettingsScreen = ({ navigation }: any) => {
             </View>
           )}
         </View>
+
+        {/* Admin */}
+        {isAdmin && (
+          <>
+            <Text style={s.groupLabel}>{t('settings.adminGroup')}</Text>
+            <View style={s.card}>
+              <Row
+                label={t('settings.adminDashboardLabel')}
+                note={t('settings.adminDashboardNote')}
+                action={t('common.view')}
+                onPress={() => navigation.navigate('AdminDashboard')}
+                colors={colors}
+              />
+            </View>
+          </>
+        )}
 
         {/* Help */}
         <Text style={s.groupLabel}>{t('settings.helpGroup')}</Text>

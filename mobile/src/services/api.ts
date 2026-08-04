@@ -83,6 +83,7 @@ const clearSession = async () => {
     'userEmail',
     'isPremium',
     'analysisCount',
+    'isAdmin',
   ]);
 };
 

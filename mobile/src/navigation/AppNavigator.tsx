@@ -15,6 +15,7 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 import HowWeScoreScreen from '../screens/HowWeScoreScreen'; // 👈 ADD THIS IMPORT
 import ImageScannerScreen from '../screens/ImageScannerScreen';
 import AudioScannerScreen from '../screens/AudioScannerScreen';
+import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import BottomTabNavigator from './BottomTabNavigator';
 
 const Stack = createStackNavigator();
@@ -138,6 +139,19 @@ const AppNavigator = () => {
           name="AudioScanner"
           component={AudioScannerScreen}
           options={{ headerShown: false }}
+        />
+
+        {/* Admin Dashboard */}
+        <Stack.Screen
+          name="AdminDashboard"
+          component={AdminDashboardScreen}
+          options={{
+            headerShown: true,
+            headerTitle: 'Admin dashboard',
+            headerStyle: headerStyle,
+            headerTitleStyle: headerTitleStyle,
+            headerTintColor: headerTintColor,
+          }}
         />
 
         {/* Article WebView */}

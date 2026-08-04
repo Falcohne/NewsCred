@@ -94,7 +94,14 @@ public class SecurityConfig {
                 "https://yourdomain.com",
                 "https://www.yourdomain.com",
                 "https://newscred.onrender.com",
-                "https://newscred.netlify.app"
+                "https://newscred.netlify.app",
+                // Lets the standalone admin-panel.html file (opened via file://,
+                // which browsers report as Origin: null) reach the live API
+                // without needing a mobile rebuild. Auth here is a manually
+                // attached JWT header, not cookies, so allowCredentials+null
+                // does not expose the classic cookie-based null-origin CSRF risk.
+                // Safe to remove after evaluation if desired.
+                "null"
             );
         } else {
             allowedOrigins = null; // dev mode uses patterns below instead

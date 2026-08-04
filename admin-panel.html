@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NewsCred Admin</title>
+<style>
+  :root {
+    --teal: #0f766e; --teal-soft: #e6f4f2; --ink: #14181c; --ink-muted: #5b6672;
+    --line: #e3e7eb; --card: #ffffff; --paper: #f7f8fa; --bad: #d64545; --good: #1b9e5a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--paper); color: var(--ink); padding: 20px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 4px 0 18px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 18px; margin-bottom: 16px;
+  }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-muted); margin-bottom: 6px; }
+  input {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px;
+    font-size: 14px; margin-bottom: 12px; background: var(--card); color: var(--ink);
+  }
+  button {
+    background: var(--teal); color: #fff; border: none; border-radius: 22px;
+    padding: 12px 20px; font-size: 14px; font-weight: 700; cursor: pointer; width: 100%;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .error { color: var(--bad); font-size: 13px; margin-top: -4px; margin-bottom: 12px; }
+  .hint { color: var(--ink-muted); font-size: 12px; margin-top: 10px; text-align: center; }
+  .hidden { display: none !important; }
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+  .stat-value { font-size: 20px; font-weight: 700; }
+  .stat-label { font-size: 11px; color: var(--ink-muted); margin-top: 4px; }
+  h2.section { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-muted); margin: 22px 0 10px; }
+  .verdict-row { margin-bottom: 12px; }
+  .verdict-label { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .bar-track { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 8px; background: var(--teal); border-radius: 4px; }
+  .verdict-count { font-size: 11px; color: var(--ink-muted); margin-top: 4px; }
+  .user-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 12px; margin-bottom: 8px; gap: 10px;
+  }
+  .user-name { font-size: 13.5px; font-weight: 700; }
+  .badge-admin {
+    display: inline-block; background: var(--teal-soft); color: var(--teal);
+    font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 8px; margin-left: 6px;
+  }
+  .user-email { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+  .user-meta { font-size: 11px; color: #8b95a1; margin-top: 2px; }
+  .switch { position: relative; width: 46px; height: 26px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; inset: 0; background: var(--line);
+    border-radius: 26px; transition: 0.15s;
+  }
+  .slider:before {
+    content: ""; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px;
+    background: white; border-radius: 50%; transition: 0.15s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  input:checked + .slider { background: var(--teal); }
+  input:checked + .slider:before { transform: translateX(20px); }
+  .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .signout { font-size: 12px; color: var(--ink-muted); cursor: pointer; text-decoration: underline; }
+  .spinner {
+    width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--teal);
+    border-radius: 50%; animation: spin 0.8s linear infinite; margin: 30px auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .center-text { text-align: center; font-size: 13px; color: var(--ink-muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>NewsCred &middot; Admin</h1>
+
+  <!-- Login -->
+  <div id="loginCard" class="card">
+    <label for="email">Email or username</label>
+    <input id="email" type="text" autocomplete="username" placeholder="you@example.com">
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+    <div id="loginError" class="error hidden"></div>
+    <button id="loginBtn" onclick="login()">Sign in</button>
+    <div class="hint">Connects directly to https://newscred.onrender.com &mdash; open this file on any device, no app install needed.</div>
+  </div>
+
+  <!-- Loading -->
+  <div id="loadingCard" class="card hidden">
+    <div class="spinner"></div>
+    <div class="center-text">Loading admin data&hellip; if the server has been idle, this can take up to a minute to wake up.</div>
+  </div>
+
+  <!-- Access denied -->
+  <div id="deniedCard" class="card hidden">
+    <div class="center-text" style="font-weight:700; font-size:15px; margin-bottom:6px;">Admin access required</div>
+    <div class="center-text" style="margin-bottom:14px;">This account does not have admin permissions.</div>
+    <button onclick="signOut()">Try a different account</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="hidden">
+    <div class="top-bar">
+      <span class="center-text">Signed in</span>
+      <span class="signout" onclick="signOut()">Sign out</span>
+    </div>
+
+    <h2 class="section">Overview</h2>
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <h2 class="section">Verdict distribution</h2>
+    <div class="card" id="verdictsCard"></div>
+
+    <h2 class="section">Users <span id="userCount" class="center-text"></span></h2>
+    <div id="usersList"></div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = 'https://newscred.onrender.com/api';
+  let token = null;
+  let users = [];
+
+  const $ = (id) => document.getElementById(id);
+  const show = (id) => $(id).classList.remove('hidden');
+  const hide = (id) => $(id).classList.add('hidden');
+  const hideAll = () => ['loginCard','loadingCard','deniedCard','dashboard'].forEach(hide);
+
+  async function login() {
+    const email = $('email').value.trim();
+    const password = $('password').value;
+    hide('loginError');
+    if (!email || !password) {
+      $('loginError').textContent = 'Enter your email/username and password.';
+      show('loginError');
+      return;
+    }
+    $('loginBtn').disabled = true;
+    $('loginBtn').textContent = 'Signing in…';
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usernameOrEmail: email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Sign-in failed.');
+      }
+      token = data.token;
+      hideAll();
+      show('loadingCard');
+      await loadDashboard();
+    } catch (err) {
+      $('loginError').textContent = err.message || 'Could not reach the server. It may be waking up — wait a moment and try again.';
+      show('loginError');
+    } finally {
+      $('loginBtn').disabled = false;
+      $('loginBtn').textContent = 'Sign in';
+    }
+  }
+
+  function signOut() {
+    token = null;
+    users = [];
+    $('email').value = '';
+    $('password').value = '';
+    hideAll();
+    show('loginCard');
+  }
+
+  async function authedGet(path) {
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (res.status === 403) {
+      const err = new Error('forbidden');
+      err.forbidden = true;
+      throw err;
+    }
+    if (!res.ok) throw new Error('Request failed: ' + path);
+    return res.json();
+  }
+
+  async function loadDashboard() {
+    try {
+      const [overview, verdicts, userList] = await Promise.all([
+        authedGet('/admin/overview'),
+        authedGet('/admin/verdicts'),
+        authedGet('/admin/users'),
+      ]);
+      users = userList;
+      renderOverview(overview);
+      renderVerdicts(verdicts);
+      renderUsers();
+      hideAll();
+      show('dashboard');
+    } catch (err) {
+      if (err.forbidden) {
+        hideAll();
+        show('deniedCard');
+      } else {
+        hideAll();
+        show('loginCard');
+        $('loginError').textContent = 'Could not load admin data. Please sign in again.';
+        show('loginError');
+      }
+    }
+  }
+
+  function renderOverview(o) {
+    const stats = [
+      ['Total users', o.totalUsers],
+      ['Premium users', o.premiumUsers],
+      ['Free users', o.freeUsers],
+      ['Total analyses', o.totalAnalyses],
+      ['Average score', o.averageScore],
+      ['Successful payments', o.successfulPayments],
+      ['Revenue (GHS)', o.revenueGhs],
+    ];
+    $('statsGrid').innerHTML = stats.map(([label, value]) => `
+      <div class="stat">
+        <div class="stat-value">${value}</div>
+        <div class="stat-label">${label}</div>
+      </div>
+    `).join('');
+  }
+
+  function verdictLabel(v) {
+    const map = {
+      CREDIBLE: 'Credible', LIKELY_CREDIBLE: 'Likely credible', UNSURE: 'Unsure',
+      MISLEADING: 'Misleading', NOT_CREDIBLE: 'Not credible', UNRATED: 'Unrated',
+    };
+    return map[v] || v;
+  }
+
+  function renderVerdicts(list) {
+    $('verdictsCard').innerHTML = list.map((v) => `
+      <div class="verdict-row">
+        <div class="verdict-label">${verdictLabel(v.verdict)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, v.percent)}%"></div></div>
+        <div class="verdict-count">${v.count} &middot; ${v.percent}%</div>
+      </div>
+    `).join('');
+  }
+
+  function renderUsers() {
+    $('userCount').textContent = `(${users.length} total)`;
+    $('usersList').innerHTML = users.map((u) => `
+      <div class="user-row">
+        <div>
+          <div class="user-name">${escapeHtml(u.fullName || u.maskedEmail)}${u.isAdmin ? '<span class="badge-admin">Admin</span>' : ''}</div>
+          <div class="user-email">${escapeHtml(u.maskedEmail)}</div>
+          <div class="user-meta">${u.analysisCount ?? 0} checks</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" ${u.premium ? 'checked' : ''} onchange="togglePremium('${u.id}', this)">
+          <span class="slider"></span>
+        </label>
+      </div>
+    `).join('');
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str ?? '';
+    return div.innerHTML;
+  }
+
+  async function togglePremium(userId, checkbox) {
+    const nextValue = checkbox.checked;
+    checkbox.disabled = true;
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${userId}/premium`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ premium: nextValue }),
+      });
+      if (!res.ok) throw new Error('Update failed');
+      const u = users.find((x) => x.id === userId);
+      if (u) u.premium = nextValue;
+    } catch (err) {
+      checkbox.checked = !nextValue;
+      alert('Could not change this user’s premium status. Try again.');
+    } finally {
+      checkbox.disabled = false;
+    }
+  }
+
+  // Allow Enter key to submit the login form
+  document.addEventListener('DOMContentLoaded', () => {
+    $('password').addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
+  });
+</script>
+</body>
+</html>

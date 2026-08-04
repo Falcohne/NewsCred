@@ -20,6 +20,7 @@ export const storeSession = async (d: any) => {
     ['userEmail', d.email || ''],
     ['isPremium', String(!!d.premium)],
     ['analysisCount', String(d.analysisCount ?? 0)],
+    ['isAdmin', String(!!(d.isAdmin ?? d.admin))],
   ];
   await AsyncStorage.multiSet(pairs);
 };
