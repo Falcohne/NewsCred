@@ -14,7 +14,10 @@ mobile/web-build/
 mobile/.env
 
 # --- Secrets (NEVER commit real config) ---
-backend/src/main/resources/application.properties
+# application.properties itself only contains ${ENV_VAR:default} placeholders
+# (verified 2026-08-04) - it's safe to commit and IS committed, since Render's
+# Docker build needs it present in the repo. Only profile-specific override
+# files (which could contain real values) stay ignored.
 backend/src/main/resources/application-*.properties
 !backend/src/main/resources/application-template.properties
 .env
